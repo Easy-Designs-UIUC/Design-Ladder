@@ -1,0 +1,132 @@
+.suggestions-sidebar {
+  background: #f8f9fa;
+  border-left: 1px solid #dee2e6;
+  padding: 1.5rem;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.design-score {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.score-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  color: #333;
+}
+
+.score-bar-container {
+  width: 100%;
+  height: 30px;
+  background: #e9ecef;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.score-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: width 0.3s ease;
+}
+
+.suggestions-section {
+  margin-bottom: 1.5rem;
+}
+
+.suggestion-toggle {
+  width: 100%;
+  padding: 0.8rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.suggestion-toggle:hover {
+  background: #e9ecef;
+}
+
+.suggestion-content {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.suggestion-item {
+  padding: 0.6rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.suggestion-item:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.color-item {
+  text-transform: capitalize;
+}
+
+.suggestions-tips {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.tips-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  color: #333;
+}
+
+.tips-list {
+  list-style: none;
+  padding: 0;
+}
+
+.tip-item {
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.5;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tip-item:last-child {
+  border-bottom: none;
+}
+

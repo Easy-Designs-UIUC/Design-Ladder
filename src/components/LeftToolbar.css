@@ -1,0 +1,182 @@
+.left-toolbar {
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.toolbar-nav {
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 0.6rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: #e9ecef;
+}
+
+.projects-list {
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+  background: white;
+}
+
+.projects-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  color: #333;
+}
+
+.project-item {
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.project-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.project-date {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.toolbar-menus {
+  flex: 1;
+  padding: 1rem;
+}
+
+.menu-section {
+  margin-bottom: 1rem;
+}
+
+.menu-toggle {
+  width: 100%;
+  padding: 0.8rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.menu-toggle:hover {
+  background: #e9ecef;
+}
+
+.menu-content {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+.submenu-toggle {
+  width: 100%;
+  padding: 0.6rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  text-align: left;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.submenu-toggle:hover {
+  background: #e9ecef;
+}
+
+.submenu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.submenu-item {
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.submenu-item:hover {
+  background: #e9ecef;
+  border-color: #667eea;
+}
+
+.elements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.element-item {
+  aspect-ratio: 1;
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.element-item:hover {
+  border-color: #667eea;
+  transform: scale(1.1);
+}
+
+.backgrounds-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.background-item {
+  aspect-ratio: 1;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.background-item:hover {
+  border-color: #667eea;
+  transform: scale(1.1);
+}
+

@@ -47,7 +47,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Key Findings & Insights',
-          position: { x: 60, y: 170 },
+          position: { x: 60, y: 200 },
           style: {
             fontFamily: 'Inter',
             fontSize: 32,
@@ -61,7 +61,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Use this space to summarize your abstract, methodology, and outcomes in a concise narrative.',
-          position: { x: 60, y: 240 },
+          position: { x: 60, y: 270 },
           style: {
             fontFamily: 'Inter',
             fontSize: 22,
@@ -259,7 +259,7 @@ export const templates = [
           content: 'NEON NIGHT',
           position: { x: 80, y: 120 },
           style: {
-            fontFamily: 'Poppins',
+            fontFamily: 'Montserrat',
             fontSize: 72,
             fontWeight: 800,
             fill: '#f472b6',
@@ -273,7 +273,7 @@ export const templates = [
           content: 'Saturday • Doors at 8 PM',
           position: { x: 80, y: 230 },
           style: {
-            fontFamily: 'Poppins',
+            fontFamily: 'Montserrat',
             fontSize: 38,
             fontWeight: 700,
             fill: '#f97316'
@@ -283,10 +283,10 @@ export const templates = [
           id: 'body',
           type: 'text',
           style: 'body',
-          content: 'Join us for a high-energy night packed with music, lights, and unforgettable experiences. Secure your tickets now!',
-          position: { x: 80, y: 310 },
-          style: {
-            fontFamily: 'Poppins',
+                content: 'Join us for a high-energy night packed with music, lights, and unforgettable experiences. Secure your tickets now!',
+                position: { x: 80, y: 310 },
+                style: {
+                  fontFamily: 'Montserrat',
             fontSize: 24,
             fontWeight: 500,
             fill: '#fef3c7',
@@ -298,10 +298,10 @@ export const templates = [
           id: 'cta',
           type: 'text',
           style: 'heading',
-          content: 'RSVP: neon.night/events',
-          position: { x: 80, y: 460 },
-          style: {
-            fontFamily: 'Poppins',
+                content: 'RSVP: neon.night/events',
+                position: { x: 80, y: 460 },
+                style: {
+                  fontFamily: 'Montserrat',
             fontSize: 30,
             fontWeight: 700,
             fill: '#fde047',
@@ -564,7 +564,7 @@ export const templates = [
           content: 'FIELD NOTES',
           position: { x: 60, y: 80 },
           style: {
-            fontFamily: 'Roboto Slab',
+            fontFamily: 'Caveat',
             fontSize: 62,
             fontWeight: 800,
             fill: '#166534'
@@ -577,7 +577,7 @@ export const templates = [
           content: 'Environmental impact study',
           position: { x: 60, y: 160 },
           style: {
-            fontFamily: 'Roboto Slab',
+            fontFamily: 'Caveat',
             fontSize: 30,
             fontWeight: 700,
             fill: '#1c4532'
@@ -587,10 +587,10 @@ export const templates = [
           id: 'body',
           type: 'text',
           style: 'body',
-          content: 'Outline your methods, fieldwork summaries, and insights in this space.',
-          position: { x: 60, y: 240 },
-          style: {
-            fontFamily: 'Roboto Slab',
+                content: 'Outline your methods, fieldwork summaries, and insights in this space.',
+                position: { x: 60, y: 240 },
+                style: {
+                  fontFamily: 'Caveat',
             fontSize: 22,
             fontWeight: 500,
             fill: '#1f2937',
@@ -602,10 +602,10 @@ export const templates = [
           id: 'quote',
           type: 'text',
           style: 'heading',
-          content: '"Data gathered over three seasons highlights strong biodiversity recovery."',
-          position: { x: 60, y: 380 },
-          style: {
-            fontFamily: 'Roboto Slab',
+                content: '"Data gathered over three seasons highlights strong biodiversity recovery."',
+                position: { x: 60, y: 380 },
+                style: {
+                  fontFamily: 'Caveat',
             fontSize: 24,
             fontWeight: 600,
             fill: '#166534',

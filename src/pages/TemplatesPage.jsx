@@ -98,7 +98,6 @@ function TemplatesPage() {
             ...templateData,
             matchMeta: { score, reasons }
           }
-          // TODO: Populate EditorPage canvas elements/background using template.layout.
         }))
         navigate('/editor')
       }

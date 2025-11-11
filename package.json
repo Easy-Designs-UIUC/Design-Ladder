@@ -1,6 +1,7 @@
 {
   "name": "design-ladder",
   "version": "1.0.0",
+  "type": "module",
   "description": "Educational tool for creating posters with smart suggestions",
   "private": true,
   "dependencies": {
@@ -10,12 +11,14 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
+    "puppeteer": "^24.29.1",
     "vite": "^5.0.8"
   },
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run generate-thumbnails",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-thumbnails": "node scripts/generate-thumbnails.js"
   }
 }
-

@@ -4,6 +4,8 @@
   "description": "Educational tool for creating posters with smart suggestions",
   "private": true,
   "dependencies": {
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0"
@@ -18,4 +20,3 @@
     "preview": "vite preview"
   }
 }
-

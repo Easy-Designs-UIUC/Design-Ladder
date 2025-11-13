@@ -34,18 +34,12 @@ function ColorsPage() {
 
   return (
     <div className="colors-page">
+      <div className="app-header">
+        <h1 className="app-logo">DESIGN LADDER</h1>
+      </div>
       <div className="colors-container">
-        <div className="colors-header">
-          <button className="back-btn" onClick={() => navigate('/topic')}>
-            BACK
-          </button>
-          <button className="next-btn" onClick={handleNext}>
-            NEXT
-          </button>
-        </div>
-
-        <h1 className="colors-title">COLOR SCHEME?</h1>
-        <h2 className="colors-subtitle">Pick up to 3</h2>
+        <h2 className="colors-title">COLOR SCHEME?</h2>
+        <h3 className="colors-subtitle">Pick up to 3</h3>
 
         <div className="colors-list">
           {colors.map((color) => (
@@ -60,6 +54,15 @@ function ColorsPage() {
             </label>
           ))}
         </div>
+      </div>
+      
+      <div className="colors-buttons">
+        <button className="back-btn" onClick={() => navigate('/topic')}>
+          BACK
+        </button>
+        <button className="next-btn" onClick={handleNext}>
+          NEXT
+        </button>
       </div>
     </div>
   )

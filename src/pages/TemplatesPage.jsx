@@ -182,21 +182,11 @@ function TemplatesPage() {
 
   return (
     <div className="templates-page">
+      <div className="app-header">
+        <h1 className="app-logo">DESIGN LADDER</h1>
+      </div>
       <div className="templates-container">
-        <div className="templates-header">
-          <button className="back-btn" onClick={() => navigate('/colors')}>
-            BACK
-          </button>
-          <button 
-            className="next-btn"
-            onClick={handleNext}
-            disabled={!selectedTemplateId}
-          >
-            NEXT
-          </button>
-        </div>
-
-        <h1 className="templates-title">CHOOSE A TEMPLATE</h1>
+        <h2 className="templates-title">CHOOSE A TEMPLATE</h2>
 
         {recommendedTemplates.length > 0 && (
           <div className="templates-section">
@@ -213,6 +203,19 @@ function TemplatesPage() {
             {otherTemplates.map(template => renderTemplateCard(template))}
           </div>
         </div>
+      </div>
+      
+      <div className="templates-buttons">
+        <button className="back-btn" onClick={() => navigate('/colors')}>
+          BACK
+        </button>
+        <button 
+          className="next-btn"
+          onClick={handleNext}
+          disabled={!selectedTemplateId}
+        >
+          NEXT
+        </button>
       </div>
     </div>
   )

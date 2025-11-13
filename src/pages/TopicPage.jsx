@@ -56,22 +56,12 @@ function TopicPage() {
 
   return (
     <div className="topic-page">
+      <div className="app-header">
+        <h1 className="app-logo">DESIGN LADDER</h1>
+      </div>
       <div className="topic-container">
-        <div className="topic-header">
-          <button className="back-btn" onClick={() => navigate('/')}>
-            BACK
-          </button>
-          <button 
-            className="next-btn"
-            onClick={handleNext}
-            disabled={selectedTopics.length === 0}
-          >
-            NEXT
-          </button>
-        </div>
-        
-        <h1 className="topic-title">WHAT IS YOUR PROJECT TOPIC?</h1>
-        <h2 className="topic-subtitle">PICK UP TO 3:</h2>
+        <h2 className="topic-title">WHAT IS YOUR PROJECT TOPIC?</h2>
+        <h3 className="topic-subtitle">PICK UP TO 3:</h3>
 
         <div className="topic-content">
           <div className="topic-selection">
@@ -129,6 +119,19 @@ function TopicPage() {
             </div>
           </div>
         </div>
+      </div>
+      
+      <div className="topic-buttons">
+        <button className="back-btn" onClick={() => navigate('/')}>
+          BACK
+        </button>
+        <button 
+          className="next-btn"
+          onClick={handleNext}
+          disabled={selectedTopics.length === 0}
+        >
+          NEXT
+        </button>
       </div>
     </div>
   )

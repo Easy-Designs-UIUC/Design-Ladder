@@ -1,9 +1,23 @@
 .suggestions-sidebar {
+  position: relative;
   background: transparent;
   border-left: 1px solid var(--card-border);
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+}
+
+.suggestions-sidebar-scrollable {
+  flex: 1;
   overflow-y: auto;
-  height: 100vh;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding: 1.5rem;
+  min-height: 0;
 }
 
 .design-score {
@@ -15,11 +29,11 @@
   color: var(--text);
 }
 
-.score-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.8rem; color: var(--muted); }
+.score-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--muted); }
 
 .score-bar-container { width: 100%; height: 30px; background: rgba(255,255,255,0.03); border-radius: 15px; overflow: hidden; position: relative; }
 
-.score-bar { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: var(--text); font-weight: 700; font-size: 0.9rem; transition: width 0.3s ease; }
+.score-bar { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: var(--text); font-weight: 700; font-size: 1rem; transition: width 0.3s ease; }
 
 .suggestions-section { margin-bottom: 1.5rem; }
 
@@ -30,11 +44,11 @@
   border: 1px solid rgba(255,255,255,0.04);
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1rem;
   text-align: left;
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
   transition: all 0.15s ease;
   color: var(--text);
 }
@@ -43,9 +57,9 @@
 
 .suggestion-content { margin-top: 0.5rem; padding: 0.5rem; background: transparent; border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; display: flex; flex-direction: column; gap: 0.5rem; }
 
-.suggestion-item { padding: 0.6rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 4px; cursor: pointer; text-align: left; font-size: 0.9rem; transition: all 0.15s ease; color: var(--text); }
+.suggestion-item { padding: 0.6rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 4px; cursor: pointer; text-align: left; font-size: 1rem; font-weight: 500; transition: all 0.15s ease; color: var(--text); }
 
-.suggestion-item:hover { background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%); color: var(--text); border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255,45,45,0.12); }
+.suggestion-item:hover { background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%); color: var(--text); border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255,0,0,0.2); }
 
 .color-item {
   text-transform: capitalize;
@@ -66,20 +80,21 @@
 .no-suggestions {
   padding: 1rem;
   text-align: center;
-  color: #666;
-  font-size: 0.85rem;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 500;
   font-style: italic;
 }
 
 .suggestion-item.used {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #e9ecef !important;
+  background: rgba(255,255,255,0.05) !important;
   position: relative;
 }
 
 .suggestion-item.used:hover {
-  background: #e9ecef !important;
+  background: rgba(255,255,255,0.05) !important;
 }
 
 .used-badge {
@@ -87,8 +102,8 @@
   right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
-  background: #22c55e;
-  color: white;
+  background: var(--accent-cyan);
+  color: var(--text-dark);
   border-radius: 50%;
   width: 20px;
   height: 20px;
@@ -104,9 +119,9 @@
 }
 
 .suggestions-header {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
   margin-bottom: 1rem;
   padding: 0 0.5rem;
 }
@@ -118,20 +133,20 @@
 }
 
 .grammarly-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--card);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .grammarly-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 4px 6px rgba(0, 255, 255, 0.2);
 }
 
 .card-icon {
@@ -146,10 +161,10 @@
 }
 
 .card-message {
-  font-size: 0.9rem;
-  color: #374151;
+  font-size: 1rem;
+  color: var(--text);
   margin-bottom: 0.5rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .card-options {
@@ -161,21 +176,21 @@
 
 .option-btn {
   padding: 0.5rem 0.75rem;
-  background: white;
-  border: 1.5px solid #d1d5db;
+  background: var(--card);
+  border: 1.5px solid var(--card-border);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 1rem;
   transition: all 0.2s ease;
-  color: #374151;
+  color: var(--text);
   font-weight: 500;
 }
 
 .option-btn:hover {
-  border-color: #667eea;
-  background: #f5f7ff;
+  border-color: var(--accent-cyan);
+  background: rgba(0, 255, 255, 0.1);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 255, 255, 0.3);
 }
 
 .font-option {
@@ -192,67 +207,68 @@
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--card-border);
 }
 
 .card-action-btn {
   padding: 0.5rem 1rem;
-  background: #667eea;
-  color: white;
+  background: var(--accent);
+  color: var(--text);
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
 .card-action-btn:hover {
-  background: #5563c1;
+  background: var(--accent-dark);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 4px rgba(255, 0, 0, 0.4);
 }
 
 .no-suggestions-message {
   text-align: center;
   padding: 2rem 1rem;
-  color: #22c55e;
+  color: var(--accent-cyan);
 }
 
 .no-suggestions-message p {
   margin: 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .no-suggestions-subtitle {
-  color: #6b7280 !important;
-  font-size: 0.85rem !important;
-  font-weight: 400 !important;
+  color: var(--text) !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
 }
 
 .no-selection-message {
   text-align: center;
   padding: 3rem 1rem;
-  color: #9ca3af;
+  color: var(--text);
 }
 
 .no-selection-message p {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .suggestions-tips {
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 2px solid #f3f4f6;
+  border-top: 2px solid var(--card-border);
 }
 
 .tips-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
   margin-bottom: 1rem;
   padding: 0 0.5rem;
 }
@@ -265,11 +281,12 @@
 
 .tip-card {
   padding: 0.75rem 1rem;
-  font-size: 0.85rem;
-  color: #6b7280;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-dark);
   line-height: 1.5;
-  background: #fef3c7;
-  border-left: 3px solid #f59e0b;
+  background: var(--accent-cyan);
+  border-left: 3px solid var(--accent);
   border-radius: 4px;
   display: flex;
   align-items: flex-start;
@@ -278,12 +295,12 @@
 }
 
 .tip-card:hover {
-  background: #fde68a;
+  background: var(--accent-cyan-dark);
   transform: translateX(2px);
 }
 
 .tip-bullet {
-  color: #f59e0b;
+  color: var(--accent);
   font-weight: bold;
   font-size: 1.2rem;
   line-height: 1;
@@ -291,6 +308,6 @@
 
 .tip-text {
   flex: 1;
-  color: #78350f;
+  color: var(--text-dark);
 }
 

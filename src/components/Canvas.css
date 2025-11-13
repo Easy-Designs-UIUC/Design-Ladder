@@ -1,11 +1,13 @@
 .canvas-container {
   flex: 1;
   overflow: auto;
+  overflow-x: hidden;
   background: transparent;
   padding: 2rem;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  min-height: 0;
 }
 
 .canvas {
@@ -32,7 +34,7 @@
 
 .canvas-element.dragging { cursor: grabbing; opacity: 0.8; }
 .canvas-element:hover { border-color: var(--accent); }
-.canvas-element.selected { border-color: var(--accent); border-style: solid; box-shadow: 0 0 0 2px rgba(255,45,45,0.12); }
+.canvas-element.selected { border-color: var(--accent); border-style: solid; box-shadow: 0 0 0 2px rgba(255,0,0,0.2); }
 .element-icon { font-size: 3rem; color: var(--text); }
 .delete-element-btn {
   position: absolute;
@@ -40,8 +42,8 @@
   right: -12px;
   width: 24px;
   height: 24px;
-  background: #dc3545;
-  color: white;
+  background: var(--accent);
+  color: var(--text);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -53,5 +55,5 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
-.delete-element-btn:hover { background: #c82333; }
+.delete-element-btn:hover { background: var(--accent-dark); }
 

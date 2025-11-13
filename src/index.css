@@ -11,14 +11,17 @@
   --ui-font: 'Poppins', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Helvetica Neue', Arial, sans-serif;
   --bg: #000000;
-  --card: #0f0f0f;
-  --card-bg: #0f0f0f; /* alias for older files */
-  --accent: #ff2d2d;
-  --accent-dark: #cc2424;
+  --card: #000000;
+  --card-bg: #000000; /* alias for older files */
+  --accent: #ff0000;
+  --accent-dark: #cc0000;
+  --accent-cyan: #00ffff;
+  --accent-cyan-dark: #00cccc;
   --text: #ffffff;
-  --muted: #bfbfbf;
-  --card-border: #222;
-  --card-shadow: rgba(255, 45, 45, 0.08);
+  --text-dark: #000000;
+  --muted: #ffffff;
+  --card-border: #333333;
+  --card-shadow: rgba(255, 0, 0, 0.2);
 }
 
 body {
@@ -34,5 +37,53 @@ html { font-size: 18px; }
 
 #root {
   min-height: 100vh;
+}
+
+/* Global smooth transitions */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Page transition animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 

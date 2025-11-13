@@ -86,10 +86,23 @@ export const HEX_TO_COLOR_MAP = Object.entries(COLOR_MAP).reduce((acc, [name, he
 // Convert color name to hex
 export const getColorHex = (colorName) => {
   if (!colorName) return '#000000'
-  // If it's already a hex, return it
-  if (colorName.startsWith('#')) return colorName
-  // Look up in map
-  return COLOR_MAP[colorName] || COLOR_MAP[colorName.replace(/\s+/g, ' ')] || '#000000'
+  // If it's already a hex, normalize and return it
+  if (colorName.startsWith('#')) {
+    let hex = colorName.toLowerCase().trim()
+    // Convert 3-char hex to 6-char
+    if (hex.length === 4) {
+      hex = '#' + hex.substring(1).split('').map(c => c + c).join('')
+    }
+    return hex
+  }
+  // Look up in map (try exact match first, then case-insensitive)
+  const normalizedName = colorName.trim()
+  if (COLOR_MAP[normalizedName]) {
+    return COLOR_MAP[normalizedName]
+  }
+  // Try case-insensitive lookup
+  const foundKey = Object.keys(COLOR_MAP).find(key => key.toLowerCase() === normalizedName.toLowerCase())
+  return foundKey ? COLOR_MAP[foundKey] : '#000000'
 }
 
 // Get all available colors

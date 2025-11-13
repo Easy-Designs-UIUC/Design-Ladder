@@ -33,17 +33,33 @@ const hexToRgb = (hex) => {
 const getColorNameFromHex = (hex) => {
   if (!hex || typeof hex !== 'string') return null
   
-  // First check if it's in our COLOR_MAP (exact match)
-  const lowerHex = hex.toLowerCase()
-  if (HEX_TO_COLOR_MAP[lowerHex]) {
-    return HEX_TO_COLOR_MAP[lowerHex]
+  // Normalize hex: remove # if present, ensure lowercase, handle 3-char hex
+  let normalizedHex = hex.toLowerCase().trim()
+  if (normalizedHex.startsWith('#')) {
+    normalizedHex = normalizedHex.substring(1)
+  }
+  // Convert 3-char hex to 6-char
+  if (normalizedHex.length === 3) {
+    normalizedHex = normalizedHex.split('').map(c => c + c).join('')
+  }
+  // Add # back for lookup
+  const lookupHex = '#' + normalizedHex
+  
+  // First check if it's in our HEX_TO_COLOR_MAP (exact match)
+  if (HEX_TO_COLOR_MAP[lookupHex]) {
+    return HEX_TO_COLOR_MAP[lookupHex]
+  }
+  
+  // Also check without # prefix
+  if (HEX_TO_COLOR_MAP[normalizedHex]) {
+    return HEX_TO_COLOR_MAP[normalizedHex]
   }
   
   // Handle named colors
-  if (lowerHex === 'white' || lowerHex === '#ffffff' || lowerHex === '#fff') return 'White'
-  if (lowerHex === 'black' || lowerHex === '#000000' || lowerHex === '#000') return 'Black'
+  if (normalizedHex === 'ffffff' || normalizedHex === 'fff') return 'White'
+  if (normalizedHex === '000000' || normalizedHex === '000') return 'Black'
   
-  const rgb = hexToRgb(hex)
+  const rgb = hexToRgb(lookupHex)
   if (!rgb) return null
   
   const { r, g, b } = rgb
@@ -186,6 +202,11 @@ const checkColorMatching = (template, canvasElements, suggestedColors = []) => {
   const normalizeColor = (color) => color?.toLowerCase().replace(/[-\s]/g, '') || ''
   const normalizedSuggestedColors = new Set(allSuggestedColors.map(normalizeColor))
   
+  // Also create a set of suggested hex values for direct comparison
+  const suggestedHexValues = new Set(
+    allSuggestedColors.map(color => getColorHex(color).toLowerCase().trim())
+  )
+  
   // Get colors actually used in canvas (text colors and backgrounds)
   const usedColors = []
   const usedColorDetails = []
@@ -193,18 +214,50 @@ const checkColorMatching = (template, canvasElements, suggestedColors = []) => {
   canvasElements.forEach(el => {
     // Check text color
     if (el.color) {
+      const colorHex = el.color.toLowerCase().trim()
       const colorName = getColorNameFromHex(el.color)
+      // Check if hex matches directly OR normalized name matches
+      const normalizedColorName = normalizeColor(colorName)
+      const matchesByHex = suggestedHexValues.has(colorHex)
+      const matchesByName = colorName && normalizedSuggestedColors.has(normalizedColorName)
+      
       if (colorName && colorName !== 'Black' && colorName !== 'White') {
-        usedColors.push(normalizeColor(colorName))
-        usedColorDetails.push({ element: el.id, type: 'text', color: colorName })
+        if (matchesByHex || matchesByName) {
+          usedColors.push(normalizedColorName)
+        } else {
+          usedColors.push(normalizedColorName)
+        }
+        usedColorDetails.push({ 
+          element: el.id, 
+          type: 'text', 
+          color: colorName,
+          hex: colorHex,
+          matches: matchesByHex || matchesByName
+        })
       }
     }
     // Check background color
     if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+      const colorHex = el.backgroundColor.toLowerCase().trim()
       const colorName = getColorNameFromHex(el.backgroundColor)
+      // Check if hex matches directly OR normalized name matches
+      const normalizedColorName = normalizeColor(colorName)
+      const matchesByHex = suggestedHexValues.has(colorHex)
+      const matchesByName = colorName && normalizedSuggestedColors.has(normalizedColorName)
+      
       if (colorName && colorName !== 'White') {
-        usedColors.push(normalizeColor(colorName))
-        usedColorDetails.push({ element: el.id, type: 'background', color: colorName })
+        if (matchesByHex || matchesByName) {
+          usedColors.push(normalizedColorName)
+        } else {
+          usedColors.push(normalizedColorName)
+        }
+        usedColorDetails.push({ 
+          element: el.id, 
+          type: 'background', 
+          color: colorName,
+          hex: colorHex,
+          matches: matchesByHex || matchesByName
+        })
       }
     }
   })
@@ -213,9 +266,10 @@ const checkColorMatching = (template, canvasElements, suggestedColors = []) => {
   
   if (usedColors.length === 0) return { score: 100, matched: 0, total: 0 }
   
-  // Count how many used colors match suggested colors (if in suggestions, give 100%)
-  const matched = usedColors.filter(color => normalizedSuggestedColors.has(color)).length
-  const total = usedColors.length
+  // Count how many used colors match suggested colors
+  // Check both normalized names and hex values from the details
+  const matched = usedColorDetails.filter(detail => detail.matches).length
+  const total = usedColorDetails.length
   
   // Score: percentage of colors that match template
   const score = total > 0 ? Math.round((matched / total) * 100) : 100
@@ -477,13 +531,17 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
       }
       
       // Text color card - check if using a suggested color
-      const currentTextColor = element.color?.toLowerCase()
+      const currentTextColor = element.color?.toLowerCase().trim()
       const currentTextColorName = getColorNameFromHex(element.color)
       const normalizedCurrentTextColor = currentTextColorName?.toLowerCase().replace(/[-\s]/g, '')
       
+      // Check both by name (normalized) and by hex value
       const isUsingCorrectTextColor = suggestedColors.some(color => {
         const normalizedSuggestedColor = color.toLowerCase().replace(/[-\s]/g, '')
-        return normalizedSuggestedColor === normalizedCurrentTextColor
+        const suggestedHex = getColorHex(color).toLowerCase().trim()
+        // Match by normalized name OR by exact hex
+        return normalizedSuggestedColor === normalizedCurrentTextColor || 
+               suggestedHex === currentTextColor
       })
       
       console.log('Checking text color for element:', element.id, {
@@ -513,13 +571,17 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
     
     // Background color card - check if using a suggested color
     if (element.backgroundColor && element.backgroundColor !== 'transparent') {
-      const currentBgColor = element.backgroundColor?.toLowerCase()
+      const currentBgColor = element.backgroundColor?.toLowerCase().trim()
       const currentBgColorName = getColorNameFromHex(element.backgroundColor)
       const normalizedCurrentBgColor = currentBgColorName?.toLowerCase().replace(/[-\s]/g, '')
       
+      // Check both by name (normalized) and by hex value
       const isUsingCorrectBgColor = suggestedColors.some(color => {
         const normalizedSuggestedColor = color.toLowerCase().replace(/[-\s]/g, '')
-        return normalizedSuggestedColor === normalizedCurrentBgColor
+        const suggestedHex = getColorHex(color).toLowerCase().trim()
+        // Match by normalized name OR by exact hex
+        return normalizedSuggestedColor === normalizedCurrentBgColor || 
+               suggestedHex === currentBgColor
       })
       
       console.log('Checking background color for element:', element.id, {

@@ -88,10 +88,13 @@ function EditorPage() {
   const [history, setHistory] = useState([initialTemplateState.elements.map(el => ({ ...el }))])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
+  const [showProjectNameModal, setShowProjectNameModal] = useState(false)
+  const [projectNameInput, setProjectNameInput] = useState('')
   const [canvasBackground, setCanvasBackground] = useState(initialTemplateState.background)
   const canvasRef = useRef(null)
   const lastLoadedProjectId = useRef(null)
   const hasClearedQuizSelections = useRef(false)
+  const projectNameInputRef = useRef(null)
 
 
   // Recalculate suggestions IMMEDIATELY when template or canvas elements change
@@ -131,13 +134,24 @@ function EditorPage() {
   }, [history, historyIndex])
 
   useEffect(() => {
+    // Don't rebuild from template if we're loading a project
+    // (project loading useEffect will handle setting elements)
+    if (appState.activeProjectId && lastLoadedProjectId.current === appState.activeProjectId) {
+      return
+    }
+    
+    // Don't rebuild if we don't have a template
+    if (!appState.selectedTemplate) {
+      return
+    }
+    
     const { elements, background } = buildTemplateState(appState.selectedTemplate)
     setCanvasElements(elements)
     setHistory([elements.map(el => ({ ...el }))])
     setHistoryIndex(0)
     setSelectedElement(null)
     setCanvasBackground(background)
-  }, [appState.selectedTemplate])
+  }, [appState.selectedTemplate, appState.activeProjectId])
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -194,6 +208,7 @@ function EditorPage() {
       return
     }
 
+    // Don't reload if we just saved this project (prevent blank screen)
     if (lastLoadedProjectId.current === activeProjectId) {
       return
     }
@@ -208,13 +223,25 @@ function EditorPage() {
       ? cloneElements(activeProject.elements)
       : cloneElements(DEFAULT_CANVAS_ELEMENTS)
 
+    // Set lastLoadedProjectId FIRST to prevent template rebuild from clearing canvas
+    lastLoadedProjectId.current = activeProjectId
+
+    // Only restore template if it's different and we're actually loading (not just saving)
+    if (activeProject.template && activeProject.template !== appState.selectedTemplate) {
+      // Update template, but lastLoadedProjectId is already set so rebuild won't happen
+      setAppState(prev => ({
+        ...prev,
+        selectedTemplate: activeProject.template
+      }))
+    }
+
+    // Load the saved elements (this preserves the canvas state)
     setCanvasElements(elementsToLoad)
     setHistory([cloneElements(elementsToLoad)])
     setHistoryIndex(0)
     setCanvasBackground(activeProject.background || null)
     setSelectedElement(null)
-    lastLoadedProjectId.current = activeProjectId
-  }, [appState.activeProjectId, appState.projects])
+  }, [appState.activeProjectId, appState.projects, appState.selectedTemplate, setAppState])
 
   const handleProjectSelect = useCallback((projectId) => {
     if (projectId === appState.activeProjectId) {
@@ -227,21 +254,31 @@ function EditorPage() {
     }))
   }, [appState.activeProjectId, setAppState])
 
-  const handleSave = useCallback(() => {
-    const today = new Date()
-    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`
+  const handleSaveClick = useCallback(() => {
     const projectId = appState.activeProjectId
 
     if (!projectId) {
+      // Show modal for new project
       const defaultName = `Project ${appState.projects.length + 1}`
-      const userInput = prompt('Enter a name for your project:', defaultName)
+      setProjectNameInput(defaultName)
+      setShowProjectNameModal(true)
+    } else {
+      // Save existing project directly
+      handleSaveProject(projectId)
+    }
+  }, [appState.activeProjectId, appState.projects.length])
 
-      if (userInput === null) {
-        return
-      }
+  const handleSaveProject = useCallback((projectId = null) => {
+    const today = new Date()
+    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`
 
-      const projectName = userInput.trim() || defaultName
+    if (!projectId) {
+      const defaultName = `Project ${appState.projects.length + 1}`
+      const projectName = projectNameInput.trim() || defaultName
       const newProjectId = Date.now()
+
+      // Set lastLoadedProjectId BEFORE state update to prevent reload
+      lastLoadedProjectId.current = newProjectId
 
       setAppState(prev => ({
         ...prev,
@@ -253,12 +290,15 @@ function EditorPage() {
             name: projectName,
             date: dateStr,
             elements: cloneElements(canvasElements),
-            background: canvasBackground
+            background: canvasBackground,
+            template: appState.selectedTemplate // Preserve template reference
           }
         ]
       }))
-      lastLoadedProjectId.current = newProjectId
+      setShowProjectNameModal(false)
+      setProjectNameInput('')
     } else {
+      // For existing projects, just update without changing activeProjectId
       setAppState(prev => ({
         ...prev,
         projects: prev.projects.map(project =>
@@ -267,7 +307,8 @@ function EditorPage() {
                 ...project,
                 date: dateStr,
                 elements: cloneElements(canvasElements),
-                background: canvasBackground
+                background: canvasBackground,
+                template: appState.selectedTemplate // Preserve template reference
               }
             : project
         )
@@ -276,7 +317,15 @@ function EditorPage() {
 
     setShowSaveConfirm(true)
     setTimeout(() => setShowSaveConfirm(false), 2000)
-  }, [appState.activeProjectId, appState.projects.length, canvasBackground, canvasElements, setAppState])
+  }, [appState.projects.length, appState.selectedTemplate, canvasBackground, canvasElements, projectNameInput, setAppState])
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (showProjectNameModal && projectNameInputRef.current) {
+      projectNameInputRef.current.focus()
+      projectNameInputRef.current.select()
+    }
+  }, [showProjectNameModal])
 
   const handleDownload = useCallback(async (format) => {
     if (!canvasRef.current) {
@@ -326,6 +375,9 @@ function EditorPage() {
 
   return (
     <div className="editor-page">
+      <div className="editor-header">
+        <h1 className="app-logo">DESIGN LADDER</h1>
+      </div>
       <div className="editor-container">
         <LeftToolbar
           onAddElement={handleAddElement}
@@ -334,7 +386,7 @@ function EditorPage() {
           projects={appState.projects}
           activeProjectId={appState.activeProjectId}
           onBackgroundChange={setCanvasBackground}
-          handleSave={handleSave}
+          handleSave={handleSaveClick}
           handleDownload={handleDownload}
           onSelectProject={handleProjectSelect}
           suggestions={suggestions}
@@ -394,6 +446,43 @@ function EditorPage() {
       {showSaveConfirm && (
         <div className="save-confirm">
           SAVED!
+        </div>
+      )}
+      
+      {showProjectNameModal && (
+        <div className="project-name-modal-overlay" onClick={() => setShowProjectNameModal(false)}>
+          <div className="project-name-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="project-name-modal-title">Enter Project Name</h2>
+            <input
+              ref={projectNameInputRef}
+              type="text"
+              className="project-name-input"
+              value={projectNameInput}
+              onChange={(e) => setProjectNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveProject()
+                } else if (e.key === 'Escape') {
+                  setShowProjectNameModal(false)
+                }
+              }}
+              placeholder="Project name..."
+            />
+            <div className="project-name-modal-buttons">
+              <button
+                className="project-name-cancel-btn"
+                onClick={() => setShowProjectNameModal(false)}
+              >
+                CANCEL
+              </button>
+              <button
+                className="project-name-save-btn"
+                onClick={() => handleSaveProject()}
+              >
+                SAVE
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

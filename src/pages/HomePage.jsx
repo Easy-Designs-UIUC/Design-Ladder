@@ -27,18 +27,11 @@ function HomePage() {
 
   return (
     <div className="home-page">
+      <div className="app-header">
+        <h1 className="app-logo">DESIGN LADDER</h1>
+      </div>
       <div className="home-container">
-        <div className="home-header">
-          <button
-            className="next-btn"
-            onClick={handleNext}
-            disabled={!selectedType}
-          >
-            NEXT
-          </button>
-        </div>
-
-        <h1 className="home-title">WHAT ARE YOU DESIGNING TODAY?</h1>
+        <h2 className="home-title">WHAT ARE YOU DESIGNING TODAY?</h2>
 
         <div className="poster-types">
           {posterTypes.map((type) => (
@@ -51,6 +44,16 @@ function HomePage() {
             </button>
           ))}
         </div>
+      </div>
+      
+      <div className="home-buttons">
+        <button
+          className="next-btn"
+          onClick={handleNext}
+          disabled={!selectedType}
+        >
+          NEXT
+        </button>
       </div>
     </div>
   )

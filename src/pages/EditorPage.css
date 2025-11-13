@@ -1,3 +1,7 @@
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
 .editor-page {
   min-height: 100vh;
   background: transparent; /* body uses var(--bg) */
@@ -7,12 +11,22 @@
 
 .editor-container {
   display: grid;
-  grid-template-columns: 250px 1fr 300px;
-  flex: 1;
-  overflow: hidden;
+  /* grid-template-columns: 250px 1fr 300px; */
+  grid-template-columns:
+    clamp(180px, 18vw, 260px)
+    minmax(0, 1fr)
+    clamp(220px, 22vw, 320px);
+
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  /* flex: 1; */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .editor-center {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -41,13 +55,33 @@
 .undo-redo-btn:hover:not(:disabled) { background: rgba(255,255,255,0.03); }
 .undo-redo-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+:root {
+  --editor-bottom-h: 56px; /* toolbar height */
+}
+
 .editor-bottom {
   padding: 1rem 2rem;
   background: transparent;
   border-top: 1px solid rgba(255,255,255,0.04);
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  gap: 2rem; */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0); /* iOS notch-safe */
+  height: calc(var(--savebar-h) + env(safe-area-inset-bottom, 0));
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+
+  z-index: 1000; /* above sidebars/canvas */
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 -6px 20px rgba(0,0,0,0.08);
 }
 
 .save-btn, .download-btn {

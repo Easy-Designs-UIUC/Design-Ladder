@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
 import './Canvas.css'
 
-function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, onDeleteElement, template, background }) {
+const Canvas = React.forwardRef(function Canvas(
+  { elements, selectedElement, onSelectElement, onUpdateElement, onDeleteElement, template, background },
+  forwardedRef
+) {
   const [dragging, setDragging] = useState(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
 
@@ -48,27 +51,50 @@ function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, o
 
   return (
     <div className="canvas-container" onClick={handleCanvasClick}>
-      <div 
-        className="canvas" 
-        style={{ 
-          backgroundImage: template ? `url(${template.thumbnail})` : 'none',
+      <div
+        ref={forwardedRef}
+        className="canvas"
+        style={{
           backgroundColor: background || 'white'
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {elements.map((element) => (
+        {elements.map((element) => {
+          const fontSize = element.fontSize || 24
+          const fontWeight = element.fontWeight || 400
+          // Calculate appropriate line-height based on font size to prevent overlap
+          let lineHeight = 'normal'
+          if (fontSize >= 60 && fontWeight >= 700) {
+            lineHeight = '0.95'
+          } else if (fontSize >= 48) {
+            lineHeight = '1.0'
+          } else if (fontSize >= 32) {
+            lineHeight = '1.1'
+          } else {
+            lineHeight = '1.2'
+          }
+          
+          return (
           <div
             key={element.id}
             className={`canvas-element ${selectedElement === element.id ? 'selected' : ''} ${dragging === element.id ? 'dragging' : ''}`}
             style={{
-              left: `${element.x}px`,
-              top: `${element.y}px`,
+              left: `${element.x || 0}px`,
+              top: `${element.y || 0}px`,
               fontFamily: element.font || 'Arial',
-              fontSize: `${element.fontSize || 24}px`,
+              fontSize: `${fontSize}px`,
+              fontWeight: fontWeight,
               backgroundColor: element.backgroundColor || 'transparent',
-              color: element.color || '#000'
+              color: element.color || '#000',
+              textAlign: element.textAlign || 'left',
+              maxWidth: element.maxWidth ? `${element.maxWidth}px` : 'none',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word',
+              boxSizing: 'border-box',
+              lineHeight: lineHeight,
+              margin: 0
             }}
             onClick={(e) => handleElementClick(e, element.id)}
             onDoubleClick={() => handleElementDoubleClick(element)}
@@ -91,11 +117,12 @@ function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, o
               </button>
             )}
           </div>
-        ))}
+        )
+        })}
       </div>
     </div>
   )
-}
+})
 
 export default Canvas
 

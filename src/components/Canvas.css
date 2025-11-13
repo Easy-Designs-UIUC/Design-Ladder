@@ -1,7 +1,7 @@
 .canvas-container {
   flex: 1;
   overflow: auto;
-  background: #e9ecef;
+  background: transparent;
   padding: 2rem;
   display: flex;
   justify-content: center;
@@ -11,12 +11,13 @@
 .canvas {
   width: 800px;
   min-height: 1000px;
-  background: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
   position: relative;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  border-radius: 8px;
 }
 
 .canvas-element {
@@ -29,25 +30,10 @@
   user-select: none;
 }
 
-.canvas-element.dragging {
-  cursor: grabbing;
-  opacity: 0.8;
-}
-
-.canvas-element:hover {
-  border-color: #667eea;
-}
-
-.canvas-element.selected {
-  border-color: #667eea;
-  border-style: solid;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-}
-
-.element-icon {
-  font-size: 3rem;
-}
-
+.canvas-element.dragging { cursor: grabbing; opacity: 0.8; }
+.canvas-element:hover { border-color: var(--accent); }
+.canvas-element.selected { border-color: var(--accent); border-style: solid; box-shadow: 0 0 0 2px rgba(255,45,45,0.12); }
+.element-icon { font-size: 3rem; color: var(--text); }
 .delete-element-btn {
   position: absolute;
   top: -12px;
@@ -64,10 +50,8 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
-.delete-element-btn:hover {
-  background: #c82333;
-}
+.delete-element-btn:hover { background: #c82333; }
 

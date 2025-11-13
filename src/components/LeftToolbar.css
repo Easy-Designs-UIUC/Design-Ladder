@@ -19,18 +19,12 @@
   padding-bottom: 140px;
 }
 
-.toolbar-nav {
-  padding: 1rem;
-  border-bottom: 1px solid #dee2e6;
-  display: flex;
-  gap: 0.5rem;
-}
-
+.toolbar-nav { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 0.5rem; }
 .nav-btn {
   flex: 1;
   padding: 0.6rem;
-  background: white;
-  border: 1px solid #dee2e6;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;

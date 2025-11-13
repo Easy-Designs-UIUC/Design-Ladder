@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
 import './Canvas.css'
 
-function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, onDeleteElement, template, background }) {
+const Canvas = React.forwardRef(function Canvas(
+  { elements, selectedElement, onSelectElement, onUpdateElement, onDeleteElement, template, background },
+  forwardedRef
+) {
   const [dragging, setDragging] = useState(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
 
@@ -49,9 +52,10 @@ function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, o
   return (
     <div className="canvas-container" onClick={handleCanvasClick}>
       <div
+        ref={forwardedRef}
         className="canvas"
         style={{
-          backgroundImage: 'none',
+          backgroundImage: template ? `url(${template.thumbnail})` : 'none',
           backgroundColor: background || 'white'
         }}
         onMouseMove={handleMouseMove}
@@ -95,7 +99,7 @@ function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, o
       </div>
     </div>
   )
-}
+})
 
 export default Canvas
 

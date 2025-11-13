@@ -55,13 +55,28 @@
 }
 
 .project-item {
+  width: 100%;
   padding: 0.6rem;
   margin-bottom: 0.5rem;
   background: #f8f9fa;
   border-radius: 6px;
+  border: 1px solid transparent;
   display: flex;
   justify-content: space-between;
   font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.project-item:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.project-item.active {
+  background: #dde5ff;
+  border-color: #667eea;
 }
 
 .project-name {

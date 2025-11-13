@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './LeftToolbar.css'
 
-function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, onBackgroundChange, handleSave, handleDownload }) {
+function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject }) {
   const navigate = useNavigate()
   const [expandedMenu, setExpandedMenu] = useState(null)
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)
@@ -69,6 +69,11 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
     onBackgroundChange(bg.color)
   }
 
+  const handleDownloadOption = (format) => {
+    setShowDownloadMenu(false)
+    handleDownload(format)
+  }
+
   return (
     <div className="left-toolbar">
       <div className="toolbar-nav">
@@ -87,10 +92,17 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
         <div className="projects-list">
           <h3 className="projects-title">Saved Projects</h3>
           {projects.map((project) => (
-            <div key={project.id} className="project-item">
+            <button
+              key={project.id}
+              className={`project-item ${activeProjectId === project.id ? 'active' : ''}`}
+              onClick={() => {
+                onSelectProject(project.id)
+                setShowProjects(false)
+              }}
+            >
               <span className="project-name">{project.name}</span>
               <span className="project-date">{project.date}</span>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -205,11 +217,11 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
           </button>
           {showDownloadMenu && (
             <div className="download-menu">
-              <button onClick={() => handleDownload('PDF')}>PDF</button>
-              <button onClick={() => handleDownload('PNG')}>PNG</button>
-              <button onClick={() => handleDownload('JPEG')}>JPEG</button>
-              <button onClick={() => handleDownload('TIFF')}>TIFF</button>
-              <button onClick={() => handleDownload('AI')}>AI</button>
+              <button onClick={() => handleDownloadOption('PDF')}>PDF</button>
+              <button onClick={() => handleDownloadOption('PNG')}>PNG</button>
+              <button onClick={() => handleDownloadOption('JPEG')}>JPEG</button>
+              <button onClick={() => handleDownloadOption('TIFF')}>TIFF</button>
+              <button onClick={() => handleDownloadOption('AI')}>AI</button>
             </div>
           )}
         </div>

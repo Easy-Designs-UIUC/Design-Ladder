@@ -1,5 +1,9 @@
-import React, { useState, useContext, useCallback, useEffect } from 'react'
+
+import React, { useState, useContext, useCallback, useRef, useEffect } from 'react'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 import { useNavigate } from 'react-router-dom'
+
 import { AppContext } from '../context/AppContext'
 import { getSuggestions } from '../data/suggestions'
 import LeftToolbar from '../components/LeftToolbar'
@@ -69,18 +73,38 @@ const buildTemplateState = (template) => {
 }
 
 function EditorPage() {
-  const navigate = useNavigate()
   const { appState, setAppState } = useContext(AppContext)
   const initialTemplateState = buildTemplateState(appState.selectedTemplate)
   const [canvasElements, setCanvasElements] = useState(initialTemplateState.elements)
   const [selectedElement, setSelectedElement] = useState(null)
   const [history, setHistory] = useState([initialTemplateState.elements.map(el => ({ ...el }))])
   const [historyIndex, setHistoryIndex] = useState(0)
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
   const [canvasBackground, setCanvasBackground] = useState(initialTemplateState.background)
+  const canvasRef = useRef(null)
+  const lastLoadedProjectId = useRef(null)
+  const hasClearedQuizSelections = useRef(false)
+
 
   const suggestions = getSuggestions(appState.posterType, appState.topics, appState.colors)
+
+  // Clear quiz selections when first reaching the editor page
+  useEffect(() => {
+    if (!hasClearedQuizSelections.current) {
+      // Only clear if there are quiz selections present
+      if (appState.posterType || appState.topics?.length > 0 || appState.colors?.length > 0 || appState.selectedTemplate) {
+        setAppState(prev => ({
+          ...prev,
+          posterType: null,
+          topics: [],
+          colors: [],
+          selectedTemplate: null
+        }))
+        hasClearedQuizSelections.current = true
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount
 
   const addToHistory = useCallback((newElements) => {
     const newHistory = history.slice(0, historyIndex + 1)
@@ -143,27 +167,143 @@ function EditorPage() {
     }
   }
 
-  const handleSave = () => {
-    const today = new Date()
-    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`
-    const newProject = {
-      id: Date.now(),
-      name: `Project ${appState.projects.length + 1}`,
-      date: dateStr,
-      elements: canvasElements
+  useEffect(() => {
+    const { activeProjectId, projects } = appState
+
+    if (!activeProjectId) {
+      lastLoadedProjectId.current = null
+      return
     }
+
+    if (lastLoadedProjectId.current === activeProjectId) {
+      return
+    }
+
+    const activeProject = projects.find((project) => project.id === activeProjectId)
+    if (!activeProject) {
+      lastLoadedProjectId.current = null
+      return
+    }
+
+    const elementsToLoad = activeProject.elements
+      ? cloneElements(activeProject.elements)
+      : cloneElements(DEFAULT_CANVAS_ELEMENTS)
+
+    setCanvasElements(elementsToLoad)
+    setHistory([cloneElements(elementsToLoad)])
+    setHistoryIndex(0)
+    setCanvasBackground(activeProject.background || null)
+    setSelectedElement(null)
+    lastLoadedProjectId.current = activeProjectId
+  }, [appState.activeProjectId, appState.projects])
+
+  const handleProjectSelect = useCallback((projectId) => {
+    if (projectId === appState.activeProjectId) {
+      return
+    }
+
     setAppState(prev => ({
       ...prev,
-      projects: [...prev.projects, newProject]
+      activeProjectId: projectId
     }))
+  }, [appState.activeProjectId, setAppState])
+
+  const handleSave = useCallback(() => {
+    const today = new Date()
+    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`
+    const projectId = appState.activeProjectId
+
+    if (!projectId) {
+      const defaultName = `Project ${appState.projects.length + 1}`
+      const userInput = prompt('Enter a name for your project:', defaultName)
+
+      if (userInput === null) {
+        return
+      }
+
+      const projectName = userInput.trim() || defaultName
+      const newProjectId = Date.now()
+
+      setAppState(prev => ({
+        ...prev,
+        activeProjectId: newProjectId,
+        projects: [
+          ...prev.projects,
+          {
+            id: newProjectId,
+            name: projectName,
+            date: dateStr,
+            elements: cloneElements(canvasElements),
+            background: canvasBackground
+          }
+        ]
+      }))
+      lastLoadedProjectId.current = newProjectId
+    } else {
+      setAppState(prev => ({
+        ...prev,
+        projects: prev.projects.map(project =>
+          project.id === projectId
+            ? {
+                ...project,
+                date: dateStr,
+                elements: cloneElements(canvasElements),
+                background: canvasBackground
+              }
+            : project
+        )
+      }))
+    }
+
     setShowSaveConfirm(true)
     setTimeout(() => setShowSaveConfirm(false), 2000)
-  }
+  }, [appState.activeProjectId, appState.projects.length, canvasBackground, canvasElements, setAppState])
 
-  const handleDownload = (format) => {
-    alert(`Downloading as ${format}...`)
-    setShowDownloadMenu(false)
-  }
+  const handleDownload = useCallback(async (format) => {
+    if (!canvasRef.current) {
+      return
+    }
+
+    const unsupportedFormats = ['TIFF', 'AI']
+    if (unsupportedFormats.includes(format)) {
+      alert(`${format} downloads are not supported yet.`)
+      return
+    }
+
+    try {
+      const canvasElement = canvasRef.current
+      const captureCanvas = await html2canvas(canvasElement, {
+        backgroundColor: null,
+        scale: window.devicePixelRatio || 1
+      })
+
+      const timestamp = new Date().toISOString().replace(/[:.-]/g, '')
+      const baseFilename = `design_poster_${timestamp}`
+
+      if (format === 'PDF') {
+        const imgData = captureCanvas.toDataURL('image/png')
+        const pdf = new jsPDF({
+          orientation: captureCanvas.width >= captureCanvas.height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [captureCanvas.width, captureCanvas.height]
+        })
+
+        pdf.addImage(imgData, 'PNG', 0, 0, captureCanvas.width, captureCanvas.height)
+        pdf.save(`${baseFilename}.pdf`)
+      } else {
+        const mimeType = format === 'PNG' ? 'image/png' : 'image/jpeg'
+        const extension = format === 'PNG' ? 'png' : 'jpg'
+        const dataUrl = captureCanvas.toDataURL(mimeType, 1.0)
+        const downloadLink = document.createElement('a')
+        downloadLink.href = dataUrl
+        downloadLink.download = `${baseFilename}.${extension}`
+        downloadLink.click()
+      }
+    } catch (error) {
+      console.error('Failed to download poster', error)
+      alert('Sorry, there was a problem preparing the download. Please try again.')
+    }
+  }, [])
 
   return (
     <div className="editor-page">
@@ -173,9 +313,11 @@ function EditorPage() {
           onUpdateElement={handleUpdateElement}
           selectedElement={selectedElement}
           projects={appState.projects}
+          activeProjectId={appState.activeProjectId}
           onBackgroundChange={setCanvasBackground}
           handleSave={handleSave}
           handleDownload={handleDownload}
+          onSelectProject={handleProjectSelect}
         />
         
         <div className="editor-center">
@@ -204,6 +346,7 @@ function EditorPage() {
             onDeleteElement={handleDeleteElement}
             template={appState.selectedTemplate}
             background={canvasBackground}
+            ref={canvasRef}
           />
         </div>
 
@@ -220,27 +363,6 @@ function EditorPage() {
           }}
         />
       </div>
-
-      {/* <div className="editor-bottom">
-        <button className="save-btn" onClick={handleSave}>
-          SAVE
-        </button>
-        <div className="download-container">
-          <button className="download-btn" onClick={() => setShowDownloadMenu(!showDownloadMenu)}>
-            DOWNLOAD
-          </button>
-          {showDownloadMenu && (
-            <div className="download-menu">
-              <button onClick={() => handleDownload('PDF')}>PDF</button>
-              <button onClick={() => handleDownload('PNG')}>PNG</button>
-              <button onClick={() => handleDownload('JPEG')}>JPEG</button>
-              <button onClick={() => handleDownload('TIFF')}>TIFF</button>
-              <button onClick={() => handleDownload('AI')}>AI</button>
-            </div>
-          )}
-        </div>
-      </div> */}
-
       {showSaveConfirm && (
         <div className="save-confirm">
           SAVED!

@@ -5,8 +5,8 @@ import './HomePage.css'
 
 function HomePage() {
   const navigate = useNavigate()
-  const { setAppState } = useContext(AppContext)
-  const [selectedType, setSelectedType] = useState(null)
+  const { appState, setAppState } = useContext(AppContext)
+  const [selectedType, setSelectedType] = useState(appState.posterType || null)
 
   const posterTypes = [
     'RESEARCH/ACADEMIC POSTER',

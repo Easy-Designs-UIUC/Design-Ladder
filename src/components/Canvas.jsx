@@ -48,10 +48,10 @@ function Canvas({ elements, selectedElement, onSelectElement, onUpdateElement, o
 
   return (
     <div className="canvas-container" onClick={handleCanvasClick}>
-      <div 
-        className="canvas" 
-        style={{ 
-          backgroundImage: template ? `url(${template.thumbnail})` : 'none',
+      <div
+        className="canvas"
+        style={{
+          backgroundImage: 'none',
           backgroundColor: background || 'white'
         }}
         onMouseMove={handleMouseMove}

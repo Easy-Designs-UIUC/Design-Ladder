@@ -3,81 +3,128 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
+  background: var(--bg);
+  padding: 3.5rem 2rem; /* more top/bottom space so content breathes */
 }
 
 .home-container {
-  background: white;
-  border-radius: 20px;
-  padding: 4rem 3rem;
-  max-width: 800px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  /* transparent container: no card box */
+  background: transparent;
+  border-radius: 12px; /* keep slightly rounded content area */
+  padding: 3.5rem 2.5rem;
+  max-width: 1200px; /* take up more of the screen */
+  width: min(95%, 1200px);
+}
+
+.home-header {
+  display: flex;
+  justify-content: flex-end; /* right-align NEXT since BACK removed on home */
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+
+.back-btn, .next-btn {
+  padding: 0.7rem 1.6rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.back-btn:hover { background: rgba(255,255,255,0.03); }
+
+.next-btn {
+  background: linear-gradient(90deg, var(--accent) 60%, var(--accent-dark) 100%);
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(255,45,45,0.12);
+}
+
+.next-btn:disabled {
+  background: #222;
+  color: #777;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .home-title {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 4.2rem; /* larger headline to dominate the screen */
+  font-weight: 800;
   text-align: center;
-  margin-bottom: 3rem;
-  color: #333;
+  margin: 0.2rem 0 1.4rem 0;
+  color: var(--text);
+  letter-spacing: 0.4px;
+  line-height: 1.02;
+  text-transform: none; /* modern, not all-caps */
 }
 
 .poster-types {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr)); /* more columns on wide screens */
   gap: 1.5rem;
-  margin-bottom: 3rem;
+  margin-bottom: 1.8rem;
 }
 
 .poster-type-btn {
   padding: 2rem 1.5rem;
-  font-size: 1.3rem;
-  font-weight: 600;
-  background: #f8f9fa;
-  border: 3px solid #dee2e6;
-  border-radius: 12px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  min-height: 140px; /* larger tap target and visual presence */
+  background: linear-gradient(180deg, #0f0f0f 0%, #151515 100%);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  color: #333;
+  transition: transform 0.16s cubic-bezier(.2,.9,.2,1), box-shadow 0.16s ease, border-color 0.16s ease;
+  color: var(--text);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .poster-type-btn:hover {
-  background: #e9ecef;
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  transform: translateY(-8px) scale(1.02);
+  border-color: var(--accent);
+  box-shadow: 0 22px 60px rgba(255,45,45,0.12);
 }
 
 .poster-type-btn.selected {
-  background: #667eea;
-  border-color: #667eea;
-  color: white;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(90deg, var(--accent) 0%, #ff6b6b 100%);
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: 0 0 0 6px rgba(255,45,45,0.10), 0 20px 70px rgba(255,45,45,0.24);
 }
 
-.next-btn {
-  width: 100%;
-  padding: 1.2rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.home-note {
+  color: var(--muted);
+  font-size: 1rem;
+  margin-top: 0.25rem;
+  text-align: center;
 }
 
-.next-btn:hover:not(:disabled) {
-  background: #5568d3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+@media (max-width: 1200px) {
+  .poster-types { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 
-.next-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
+@media (max-width: 768px) {
+  .home-title { font-size: 2.6rem; }
+  .home-container { padding: 1.8rem; }
+  .poster-types { grid-template-columns: 1fr; }
+  .poster-type-btn { padding: 1.1rem; font-size: 1.02rem; min-height: 90px; }
+  .next-btn { padding: 0.75rem 1rem; font-size: 0.98rem; }
+}
+
+@media (max-width: 420px) {
+  .home-title { font-size: 1.8rem; }
+  .home-container { padding: 1rem; }
+  .poster-type-btn { padding: 0.9rem; font-size: 0.98rem; min-height: 80px; }
+  .next-btn { padding: 0.6rem 0.9rem; font-size: 0.9rem; }
 }
 

@@ -16,6 +16,11 @@ const DEFAULT_CANVAS_ELEMENTS = [
   { id: 'default-subtitle', type: 'text', content: 'SUBTITLE', style: 'subtitle', x: 100, y: 180, font: 'Arial', fontSize: 32 }
 ]
 
+// Clone elements array to avoid mutating the original
+const cloneElements = (elements) => {
+  return elements.map(el => ({ ...el }))
+}
+
 // Simple flattening transformation - just extracts nested position/style to top level
 // Templates should provide all properties explicitly
 const normalizeTemplateElements = (elements = []) =>
@@ -93,6 +98,7 @@ function EditorPage() {
   const [canvasBackground, setCanvasBackground] = useState(initialTemplateState.background)
   const canvasRef = useRef(null)
   const lastLoadedProjectId = useRef(null)
+  const lastLoadedTemplateId = useRef(null)
   const hasClearedQuizSelections = useRef(false)
   const projectNameInputRef = useRef(null)
 
@@ -134,23 +140,39 @@ function EditorPage() {
   }, [history, historyIndex])
 
   useEffect(() => {
-    // Don't rebuild from template if we're loading a project
+    // Don't rebuild from template if we're loading a project AND template hasn't changed
     // (project loading useEffect will handle setting elements)
-    if (appState.activeProjectId && lastLoadedProjectId.current === appState.activeProjectId) {
-      return
-    }
+    const currentTemplateId = appState.selectedTemplate?.id
     
     // Don't rebuild if we don't have a template
     if (!appState.selectedTemplate) {
+      lastLoadedTemplateId.current = null
       return
     }
     
+    // Always rebuild if template ID changed (even if there's an active project)
+    const templateChanged = lastLoadedTemplateId.current !== currentTemplateId
+    
+    // Skip only if: active project was just loaded AND template hasn't changed
+    if (appState.activeProjectId && 
+        lastLoadedProjectId.current === appState.activeProjectId &&
+        !templateChanged) {
+      return
+    }
+    
+    // If template changed (or no project), rebuild canvas from template
     const { elements, background } = buildTemplateState(appState.selectedTemplate)
     setCanvasElements(elements)
     setHistory([elements.map(el => ({ ...el }))])
     setHistoryIndex(0)
     setSelectedElement(null)
     setCanvasBackground(background)
+    lastLoadedTemplateId.current = currentTemplateId
+    
+    // If no active project, reset project tracking so template changes work
+    if (!appState.activeProjectId) {
+      lastLoadedProjectId.current = null
+    }
   }, [appState.selectedTemplate, appState.activeProjectId])
 
   const handleUndo = () => {
@@ -170,9 +192,73 @@ function EditorPage() {
   }
 
   const handleAddElement = (element) => {
+    // Check if this element matches a missing template element
+    let elementId = Date.now()
+    if (appState.selectedTemplate?.layout?.elements) {
+      const templateElements = appState.selectedTemplate.layout.elements
+      const canvasElementIds = new Set(canvasElements.map(el => el.id))
+      
+      // Find matching template element that's currently missing
+      const matchingTemplateElement = templateElements.find(templateEl => {
+        // For decorative elements, match by elementType, style, or icon
+        if (element.type === 'element' && templateEl.type === 'element') {
+          // Match by elementType first, then by style, then by icon
+          const elementTypeMatch = templateEl.elementType === element.elementType
+          const styleMatch = templateEl.style === element.elementType || 
+                            templateEl.style === element.elementType?.toLowerCase()
+          const iconMatch = templateEl.icon === element.icon
+          
+          return (elementTypeMatch || styleMatch || iconMatch) && 
+                 !canvasElementIds.has(templateEl.id)
+        }
+        // For text elements, match by style/content if available
+        if (element.type === 'text' && templateEl.type === 'text') {
+          return templateEl.style === element.style && 
+                 !canvasElementIds.has(templateEl.id)
+        }
+        return false
+      })
+      
+      if (matchingTemplateElement) {
+        // Use the template element's ID to restore completeness
+        elementId = matchingTemplateElement.id
+        // Use template element's position if available
+        const templatePos = matchingTemplateElement.position || matchingTemplateElement
+        // Preserve template element's elementType if it exists
+        const templateElementType = matchingTemplateElement.elementType || matchingTemplateElement.style
+        
+        if (templatePos.x !== undefined && templatePos.y !== undefined) {
+          const newElement = {
+            ...element,
+            id: elementId,
+            elementType: templateElementType || element.elementType,
+            x: templatePos.x,
+            y: templatePos.y
+          }
+          const newElements = [...canvasElements, newElement]
+          setCanvasElements(newElements)
+          addToHistory(newElements)
+          return
+        } else {
+          // Even without position, use template ID and elementType
+          const newElement = {
+            ...element,
+            id: elementId,
+            elementType: templateElementType || element.elementType,
+            x: 200,
+            y: 200
+          }
+          const newElements = [...canvasElements, newElement]
+          setCanvasElements(newElements)
+          addToHistory(newElements)
+          return
+        }
+      }
+    }
+    
     const newElement = {
       ...element,
-      id: Date.now(),
+      id: elementId,
       x: 200,
       y: 200
     }
@@ -205,6 +291,7 @@ function EditorPage() {
 
     if (!activeProjectId) {
       lastLoadedProjectId.current = null
+      lastLoadedTemplateId.current = null // Reset template tracking when no project
       return
     }
 
@@ -233,6 +320,9 @@ function EditorPage() {
         ...prev,
         selectedTemplate: activeProject.template
       }))
+      lastLoadedTemplateId.current = activeProject.template?.id || null
+    } else {
+      lastLoadedTemplateId.current = appState.selectedTemplate?.id || null
     }
 
     // Load the saved elements (this preserves the canvas state)

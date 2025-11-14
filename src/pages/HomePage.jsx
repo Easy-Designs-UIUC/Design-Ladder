@@ -20,7 +20,13 @@ function HomePage() {
 
   const handleNext = () => {
     if (selectedType) {
-      setAppState(prev => ({ ...prev, posterType: selectedType }))
+      // Clear active project when starting a new flow
+      setAppState(prev => ({ 
+        ...prev, 
+        posterType: selectedType,
+        activeProjectId: null,
+        selectedTemplate: null
+      }))
       navigate('/topic')
     }
   }

@@ -64,7 +64,9 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   
   const elements = [
     { id: 'flower', name: 'Flower', icon: '🌸' },
-    { id: 'graph', name: 'Graph', icon: '📊' },
+    { id: 'graph', name: 'Graph', icon: '📊', elementType: 'chart' },
+    { id: 'photo', name: 'Photo', icon: '📷', elementType: 'photo' },
+    { id: 'lightbulb', name: 'Lightbulb', icon: '💡', elementType: 'lightbulb' },
     { id: 'heart', name: 'Heart', icon: '❤️' },
     { id: 'star', name: 'Star', icon: '⭐' },
     { id: 'arrow', name: 'Arrow', icon: '➡️' },
@@ -115,7 +117,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   const handleElementClick = (element) => {
     onAddElement({
       type: 'element',
-      elementType: element.id,
+      elementType: element.elementType || element.id, // Use elementType if available, otherwise use id
       icon: element.icon,
       name: element.name
     })

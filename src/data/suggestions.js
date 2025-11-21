@@ -355,7 +355,13 @@ const generateTemplateTips = (template, completeness, fontMatching, colorMatchin
     tips.push(template.description)
   }
   
-  return tips.slice(0, 5) // Limit to 5 tips max
+  // WCAG accessibility and readability tips
+  tips.push('Ensure text has at least 4.5:1 contrast ratio for readability. Low contrast makes content hard to read, especially for users with visual impairments (WCAG AA)')
+  tips.push('Use font sizes of 12pt (16px) or larger for body text. Smaller text reduces readability, especially when viewed from a distance')
+  tips.push('Maintain adequate spacing between elements (minimum 8px). Proper spacing improves visual hierarchy and prevents elements from appearing cluttered')
+  tips.push('Keep line height at 1.5x font size for comfortable reading. Insufficient line spacing makes text difficult to scan and can cause eye strain')
+  
+  return tips.slice(0, 8) // Limit to 8 tips max (increased to accommodate WCAG tips)
 }
 
 /**

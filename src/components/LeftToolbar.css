@@ -43,14 +43,29 @@
   padding: 1rem;
   border-bottom: 1px solid var(--card-border);
   background: var(--card);
+  margin-bottom: 1rem;
 }
 
-.projects-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 0.8rem;
+.projects-open-library-btn {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
   color: var(--text);
+  text-align: center;
+  transition: all 0.2s ease;
 }
+
+.projects-open-library-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--accent-cyan);
+}
+
 
 .project-item {
   width: 100%;
@@ -78,11 +93,18 @@
 }
 
 .project-name {
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
   font-weight: 500;
   color: var(--text);
 }
 
 .project-date {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
   color: var(--text);
   font-size: 0.95rem;
   opacity: 0.7;

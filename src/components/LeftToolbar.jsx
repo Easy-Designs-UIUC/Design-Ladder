@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getColorHex, COLOR_MAP } from '../utils/colorUtils'
 import './LeftToolbar.css'
 
-function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template }) {
+function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template, hasUnsavedChanges }) {
   const navigate = useNavigate()
   const [expandedMenu, setExpandedMenu] = useState(null)
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)
@@ -11,6 +11,21 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
 
   const textStyles = ['Title', 'Subtitle', 'Heading', 'Body']
+
+    const confirmNavigateAway = (navigateFn) => {
+      if (!hasUnsavedChanges) {
+        navigateFn()
+        return
+      }
+
+      const ok = window.confirm(
+        'You have unsaved changes. If you leave the editor now, your latest edits will be lost. Continue?'
+      )
+      if (ok) {
+        navigateFn()
+      }
+    }
+
   
   // Use template fonts + add common alternative fonts for user choice
   const fonts = useMemo(() => {
@@ -146,7 +161,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   return (
     <div className="left-toolbar">
       <div className="toolbar-nav">
-        <button className="nav-btn" onClick={() => navigate('/')}>
+        <button className="nav-btn" onClick={() => confirmNavigateAway(() => navigate('/'))}>
           Home
         </button>
         <button 
@@ -157,9 +172,19 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
         </button>
       </div>
 
-      {showProjects && (
+      <div className="left-toolbar-scrollable">
+        {showProjects && (
         <div className="projects-list">
-          <h3 className="projects-title">Saved Projects</h3>
+          <button
+            className="projects-open-library-btn"
+            onClick={() => {
+              confirmNavigateAway(() => {
+                setShowProjects(false)
+                navigate('/projects')
+              })
+            }} >
+            Open Projects Library
+          </button>
           {projects.map((project) => (
             <button
               key={project.id}
@@ -175,8 +200,6 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
           ))}
         </div>
       )}
-
-      <div className="left-toolbar-scrollable">
         <div className="toolbar-menus">
           <div className="menu-section">
             <button

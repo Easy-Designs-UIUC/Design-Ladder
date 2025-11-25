@@ -153,16 +153,35 @@
   border-radius: 6px;
 }
 
-/* .submenu-content {
-  background: rgba(255, 255, 255, 0.08);
-  background-color: blueviolet;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 0.6rem;
-  margin-top: 0.35rem;
-  margin-bottom: 0.5rem;
-  border-radius: 6px;
-  backdrop-filter: blur(4px);
-} */
+/* disable styling */
+.submenu-item.disabled,
+.submenu-item:disabled,
+.color-button.disabled,
+.color-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.submenu-item.disabled:hover,
+.color-button.disabled:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.menu-toggle.disabled,
+.menu-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.text-menu-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+
 
 /* first box that opens when Text is toggled */
 .text-menu-content {

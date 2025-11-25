@@ -228,6 +228,13 @@ function EditorPage() {
     return !(sameElements && sameBackground)
   }, [appState, canvasElements, canvasBackground])
 
+  // Find the full selected element object
+  const selectedElementData = useMemo(
+    () => canvasElements.find(el => el.id === selectedElement) || null,
+    [canvasElements, selectedElement]
+  )
+
+
   const handleUndo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1
@@ -599,6 +606,7 @@ function EditorPage() {
           onAddElement={handleAddElement}
           onUpdateElement={handleUpdateElement}
           selectedElement={selectedElement}
+          selectedElementData={selectedElementData}
           projects={appState.projects}
           activeProjectId={appState.activeProjectId}
           onBackgroundChange={setCanvasBackground}

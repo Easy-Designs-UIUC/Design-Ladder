@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getColorHex, COLOR_MAP } from '../utils/colorUtils'
 import './LeftToolbar.css'
 
-function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template, hasUnsavedChanges }) {
+function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, selectedElementData, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template, hasUnsavedChanges }) {
   const navigate = useNavigate()
   const [expandedMenu, setExpandedMenu] = useState(null)
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)
@@ -12,19 +12,23 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
 
   const textStyles = ['Title', 'Subtitle', 'Heading', 'Body']
 
-    const confirmNavigateAway = (navigateFn) => {
-      if (!hasUnsavedChanges) {
-        navigateFn()
-        return
-      }
+  const isTextSelected = selectedElementData?.type === 'text'
+  const isElementSelected = selectedElementData?.type === 'element'
+  // const isIconSelected = selectedElementData?.type === 'element'
 
-      const ok = window.confirm(
-        'You have unsaved changes. If you leave the editor now, your latest edits will be lost. Continue?'
-      )
-      if (ok) {
-        navigateFn()
-      }
+  const confirmNavigateAway = (navigateFn) => {
+    if (!hasUnsavedChanges) {
+      navigateFn()
+      return
     }
+
+    const ok = window.confirm(
+      'You have unsaved changes. If you leave the editor now, your latest edits will be lost. Continue?'
+    )
+    if (ok) {
+      navigateFn()
+    }
+  }
 
   
   // Use template fonts + add common alternative fonts for user choice
@@ -105,7 +109,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
     const styleProps = styleMap[style]
     if (!styleProps) return
     
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       onUpdateElement(selectedElement, {
         style: styleProps.style,
         fontSize: styleProps.fontSize
@@ -121,20 +125,20 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   }
 
   const handleFontClick = (font) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       onUpdateElement(selectedElement, { font })
     }
   }
 
   const handleTextColorClick = (colorHex) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       console.log('Changing text color to:', colorHex)
       onUpdateElement(selectedElement, { color: colorHex })
     }
   }
 
   const handleElementBackgroundClick = (colorHex) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       console.log('Changing element background to:', colorHex)
       onUpdateElement(selectedElement, { backgroundColor: colorHex })
     }
@@ -203,13 +207,13 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
         <div className="toolbar-menus">
           <div className="menu-section">
             <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('text')}
-            >
+              className={`menu-toggle ${isElementSelected ? 'disabled' : ''}`}
+              onClick={() => !isElementSelected && toggleMenu('text')}
+              disabled={isElementSelected} >
               Text {expandedMenu === 'text' ? '−' : '+'}
             </button>
             {expandedMenu === 'text' && (
-              <div className="menu-content text-menu-content">
+              <div className={`menu-content text-menu-content ${isElementSelected ? 'text-menu-disabled' : ''}`}>
                 <button
                   className="submenu-toggle"
                   onClick={() => setExpandedSubmenu(expandedSubmenu === 'styles' ? null : 'styles')}

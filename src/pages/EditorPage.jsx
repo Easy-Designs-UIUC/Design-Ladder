@@ -378,86 +378,164 @@ function EditorPage() {
     setSelectedElement(null)
   }, [appState.projects, setAppState])
 
+  // const handleSave = useCallback(() => {
+  //   // Snapshot exactly what is on the canvas right now
+  //   const elementsSnapshot = cloneElements(canvasElements)
+  //   const backgroundSnapshot = canvasBackground
 
-  // const handleSaveClick = useCallback(() => {
-  //   const projectId = appState.activeProjectId
+  //   const today = new Date()
+  //   const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(
+  //     today.getDate()
+  //   ).padStart(2, '0')}/${today.getFullYear()}`
 
-  //   if (!projectId) {
-  //     // Show modal for new project
-  //     const defaultName = `Project ${appState.projects.length + 1}`
-  //     setProjectNameInput(defaultName)
-  //     setShowProjectNameModal(true)
-  //   } else {
-  //     // Save existing project directly
-  //     handleSaveProject(projectId)
-  //   }
-  // }, [appState.activeProjectId, appState.projects.length])
+  //   setAppState(prev => {
+  //     const { activeProjectId, projects, selectedTemplate } = prev
 
-  const handleSave = useCallback(() => {
-    // Snapshot exactly what is on the canvas right now
-    const elementsSnapshot = cloneElements(canvasElements)
-    const backgroundSnapshot = canvasBackground
+  //     const createNewProject = () => {
+  //       const newId = Date.now()
+  //       const enteredName = projectNameInput.trim()
+  //       const projectName = enteredName || `Project ${projects.length + 1}`
 
-    const today = new Date()
-    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(
-      today.getDate()
-    ).padStart(2, '0')}/${today.getFullYear()}`
+  //       const newProject = {
+  //         id: newId,
+  //         name: projectName,
+  //         date: dateStr,
+  //         elements: elementsSnapshot,
+  //         background: backgroundSnapshot,
+  //         template: selectedTemplate || null
+  //       }
 
-    setAppState(prev => {
-      const { activeProjectId, projects, selectedTemplate } = prev
+  //       return {
+  //         ...prev,
+  //         activeProjectId: newId,
+  //         projects: [...projects, newProject]
+  //       }
+  //     }
 
-      const createNewProject = () => {
-        const newId = Date.now()
-        const enteredName = projectNameInput.trim()
-        const projectName = enteredName || `Project ${projects.length + 1}`
+  //     // No active project yet → create one
+  //     if (!activeProjectId) {
+  //       return createNewProject()
+  //     }
 
-        const newProject = {
-          id: newId,
-          name: projectName,
-          date: dateStr,
-          elements: elementsSnapshot,
-          background: backgroundSnapshot,
-          template: selectedTemplate || null
-        }
+  //     // Update existing project
+  //     const updatedProjects = projects.map(project =>
+  //       project.id === activeProjectId
+  //         ? {
+  //             ...project,
+  //             date: dateStr,
+  //             elements: elementsSnapshot,
+  //             background: backgroundSnapshot,
+  //             template: selectedTemplate || project.template || null
+  //           }
+  //         : project
+  //     )
 
-        return {
-          ...prev,
-          activeProjectId: newId,
-          projects: [...projects, newProject]
-        }
+  //     return {
+  //       ...prev,
+  //       projects: updatedProjects
+  //     }
+  //   })
+
+  //   setShowSaveConfirm(true)
+  //   setTimeout(() => setShowSaveConfirm(false), 2000)
+
+  //   setShowProjectNameModal(false)
+  //   setProjectNameInput('')
+
+  // }, [canvasElements, canvasBackground, projectNameInput, setAppState])
+  const handleSave = useCallback(async () => {
+  // 1) Snapshot element state
+  const elementsSnapshot = cloneElements(canvasElements)
+  const backgroundSnapshot = canvasBackground
+
+  const today = new Date()
+  const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(
+    today.getDate()
+  ).padStart(2, '0')}/${today.getFullYear()}`
+
+  // 2) Build a thumbnail from the actual canvas (small, no selection box)
+  let thumbnailDataUrl = null
+
+  const prevSelected = selectedElement
+  setSelectedElement(null)
+
+  // let React update the DOM to remove the selection outline
+  await new Promise(resolve => requestAnimationFrame(resolve))
+
+  if (canvasRef.current) {
+    try {
+      const thumbCanvas = await html2canvas(canvasRef.current, {
+        backgroundColor: null,
+        scale: 0.3,          // smaller → faster + lighter
+        removeContainer: true
+      })
+      thumbnailDataUrl = thumbCanvas.toDataURL('image/png')
+    } catch (err) {
+      console.error('Failed to generate project thumbnail', err)
+    }
+  }
+
+  // restore selection in the editor
+  setSelectedElement(prevSelected)
+
+  // 3) Save project (including thumbnail)
+  setAppState(prev => {
+    const { activeProjectId, projects, selectedTemplate } = prev
+
+    const createNewProject = () => {
+      const newId = Date.now()
+      const enteredName = projectNameInput.trim()
+      const projectName = enteredName || `Project ${projects.length + 1}`
+
+      const newProject = {
+        id: newId,
+        name: projectName,
+        date: dateStr,
+        elements: elementsSnapshot,
+        background: backgroundSnapshot,
+        template: selectedTemplate || null,
+        thumbnail: thumbnailDataUrl || null
       }
-
-      // No active project yet → create one
-      if (!activeProjectId) {
-        return createNewProject()
-      }
-
-      // Update existing project
-      const updatedProjects = projects.map(project =>
-        project.id === activeProjectId
-          ? {
-              ...project,
-              date: dateStr,
-              elements: elementsSnapshot,
-              background: backgroundSnapshot,
-              template: selectedTemplate || project.template || null
-            }
-          : project
-      )
 
       return {
         ...prev,
-        projects: updatedProjects
+        activeProjectId: newId,
+        projects: [...projects, newProject]
       }
-    })
+    }
 
-    setShowSaveConfirm(true)
-    setTimeout(() => setShowSaveConfirm(false), 2000)
+    // No active project yet → create one
+    if (!activeProjectId) {
+      return createNewProject()
+    }
 
-    setShowProjectNameModal(false)
-    setProjectNameInput('')
+    // Update existing project
+    const updatedProjects = projects.map(project =>
+      project.id === activeProjectId
+        ? {
+            ...project,
+            date: dateStr,
+            elements: elementsSnapshot,
+            background: backgroundSnapshot,
+            template: selectedTemplate || project.template || null,
+            thumbnail: thumbnailDataUrl || project.thumbnail || null
+          }
+        : project
+    )
 
-  }, [canvasElements, canvasBackground, projectNameInput, setAppState])
+    return {
+      ...prev,
+      projects: updatedProjects
+    }
+  })
+
+  setShowSaveConfirm(true)
+  setTimeout(() => setShowSaveConfirm(false), 2000)
+
+  setShowProjectNameModal(false)
+  setProjectNameInput('')
+}, [canvasElements, canvasBackground, projectNameInput, selectedElement, setAppState])
+
 
   const handleSaveClick = useCallback(() => {
     // If no active project yet → first save → ask for a name
@@ -469,7 +547,6 @@ function EditorPage() {
       handleSave()
     }
   }, [appState.activeProjectId, handleSave])
-
 
   // Focus input when modal opens
   useEffect(() => {

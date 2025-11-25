@@ -6,6 +6,9 @@ import ColorsPage from './pages/ColorsPage'
 import TemplatesPage from './pages/TemplatesPage'
 import EditorPage from './pages/EditorPage'
 import { AppContext } from './context/AppContext'
+import HomeHubPage from './pages/HomeHubPage'
+import ProjectsLibrary from './pages/ProjectsLibrary'
+
 
 const DEFAULT_STATE = {
     posterType: null,
@@ -94,11 +97,17 @@ function App() {
   return (
     <AppContext.Provider value={{ appState, setAppState }}>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={
+            appState.projects.length > 0 
+              ? <HomeHubPage />
+              : <HomePage />
+          } />
         <Route path="/topic" element={<TopicPage />} />
         <Route path="/colors" element={<ColorsPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/editor" element={<EditorPage />} />
+        
+        <Route path="/projects" element={<ProjectsLibrary />} />
       </Routes>
     </AppContext.Provider>
   )

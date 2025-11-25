@@ -46,7 +46,7 @@
 .editor-container {
   display: grid;
   grid-template-columns:
-    clamp(180px, 18vw, 260px)
+    clamp(220px, 22vw, 340px)
     minmax(0, 1fr)
     clamp(220px, 22vw, 320px);
   width: 100%;

@@ -86,12 +86,23 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
       'Heading': { style: 'heading', fontSize: 36 },
       'Body': { style: 'body', fontSize: 16 }
     }
-    onAddElement({
-      type: 'text',
-      content: style.toUpperCase(),
-      ...styleMap[style],
-      font: 'Arial'
-    })
+
+    const styleProps = styleMap[style]
+    if (!styleProps) return
+    
+    if (selectedElement) {
+      onUpdateElement(selectedElement, {
+        style: styleProps.style,
+        fontSize: styleProps.fontSize
+      })
+    } else {
+      onAddElement({
+        type: 'text',
+        content: style.toUpperCase(),
+        ...styleMap[style],
+        font: 'Arial'
+      })
+    }
   }
 
   const handleFontClick = (font) => {
@@ -175,7 +186,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
               Text {expandedMenu === 'text' ? '−' : '+'}
             </button>
             {expandedMenu === 'text' && (
-              <div className="menu-content">
+              <div className="menu-content text-menu-content">
                 <button
                   className="submenu-toggle"
                   onClick={() => setExpandedSubmenu(expandedSubmenu === 'styles' ? null : 'styles')}
@@ -360,8 +371,6 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
               <button onClick={() => handleDownloadOption('PDF')}>PDF</button>
               <button onClick={() => handleDownloadOption('PNG')}>PNG</button>
               <button onClick={() => handleDownloadOption('JPEG')}>JPEG</button>
-              <button onClick={() => handleDownloadOption('TIFF')}>TIFF</button>
-              <button onClick={() => handleDownloadOption('AI')}>AI</button>
             </div>
           )}
         </div>

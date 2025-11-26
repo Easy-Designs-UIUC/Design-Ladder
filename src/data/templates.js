@@ -523,9 +523,9 @@ export const templates = [
           position: { x: 80, y: 640 },
           style: {
             fontFamily: 'IBM Plex Sans',
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 600,
-            fill: '#334155',
+            fill: '#1e293b',
             backgroundColor: '#cbd5f5',
             maxWidth: 460
           }

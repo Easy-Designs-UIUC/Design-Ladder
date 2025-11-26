@@ -528,6 +528,10 @@ function EditorPage() {
               } else if (type === 'text-color') {
                 console.log('Setting text color to:', value)
                 handleUpdateElement(selectedElement, { color: value })
+              } else if (type === 'fontSize') {
+                handleUpdateElement(selectedElement, { fontSize: value })
+              } else if (type === 'lineHeight') {
+                handleUpdateElement(selectedElement, { lineHeight: value })
               }
             }
           }}

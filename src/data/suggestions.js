@@ -1,4 +1,5 @@
 import { getColorHex, HEX_TO_COLOR_MAP } from '../utils/colorUtils'
+import { checkContrastWCAG, checkFontSize, checkLineHeight, generateContrastOptions } from '../utils/wcagUtils'
 
 // Extract unique fonts from template elements
 const extractTemplateFonts = (template) => {
@@ -277,11 +278,13 @@ const checkColorMatching = (template, canvasElements, suggestedColors = []) => {
   return { score, matched, total, unmatched: total - matched }
 }
 
-// Generate template-specific tips
-const generateTemplateTips = (template, completeness, fontMatching, colorMatching) => {
+// Generate template-specific tips with WCAG violation detection
+const generateTemplateTips = (template, completeness, fontMatching, colorMatching, canvasElements = [], canvasBackground = null) => {
   const tips = []
   
   if (!template) return tips
+  
+  const background = canvasBackground || template?.layout?.background || '#ffffff'
   
   // Completeness tips (most important)
   if (completeness.missing.length > 0) {
@@ -320,34 +323,34 @@ const generateTemplateTips = (template, completeness, fontMatching, colorMatchin
     tips.push('Perfect! Your design matches the template perfectly')
   }
   
-  // Template-specific style tips
+  // Template-specific style tips with WCAG rationale
   if (template.styleTags && Array.isArray(template.styleTags)) {
     if (template.styleTags.includes('Minimal') || template.styleTags.includes('Clean')) {
-      tips.push('Maintain clean spacing and avoid overcrowding')
+      tips.push('Maintain clean spacing and avoid overcrowding. Adequate white space improves readability and helps users focus on key information (WCAG 1.3.1)')
     }
     if (template.styleTags.includes('Bold') || template.styleTags.includes('High contrast')) {
-      tips.push('Use strong color contrasts for visual impact')
+      tips.push('Use strong color contrasts for visual impact. High contrast (7:1) enhances readability for all users, especially in varied lighting conditions (WCAG 1.4.6)')
     }
     if (template.styleTags.includes('Professional') || template.styleTags.includes('Corporate')) {
-      tips.push('Keep typography consistent and aligned')
+      tips.push('Keep typography consistent and aligned. Consistent styling creates clear visual relationships between related content (WCAG 1.3.1)')
     }
     if (template.styleTags.includes('Infographic') || template.styleTags.includes('Data-forward')) {
-      tips.push('Use icons and visual elements to enhance readability')
+      tips.push('Use icons and visual elements to enhance readability. Ensure icons meet 3:1 contrast ratio and pair with text labels for clarity (WCAG 1.4.11, 1.4.1)')
     }
     if (template.styleTags.includes('Illustrated') || template.styleTags.includes('Playful')) {
-      tips.push('Incorporate visual elements to add personality')
+      tips.push('Incorporate visual elements to add personality. Remember to maintain sufficient contrast so decorative elements don\'t interfere with text readability')
     }
   }
   
-  // Poster type specific guidance
+  // Poster type specific guidance with WCAG rationale
   if (template.posterTypes?.includes('RESEARCH/ACADEMIC POSTER')) {
-    tips.push('Ensure text hierarchy guides the reader through your content')
+    tips.push('Ensure text hierarchy guides the reader through your content. Clear headings and structure help readers navigate complex information efficiently (WCAG 1.3.1, 2.4.6)')
   }
   if (template.posterTypes?.includes('SOCIAL EVENT POSTER')) {
-    tips.push('Make key event information (date, time, location) prominent')
+    tips.push('Make key event information (date, time, location) prominent. Use size, contrast, and spacing to ensure critical details are easily found and readable')
   }
   if (template.posterTypes?.includes('ORGANIZATIONAL')) {
-    tips.push('Maintain brand consistency with organizational colors')
+    tips.push('Maintain brand consistency with organizational colors. Ensure brand colors meet contrast requirements (4.5:1) so text remains readable (WCAG 1.4.3)')
   }
   
   // Template description as tip if available
@@ -355,13 +358,74 @@ const generateTemplateTips = (template, completeness, fontMatching, colorMatchin
     tips.push(template.description)
   }
   
-  // WCAG accessibility and readability tips
-  tips.push('Ensure text has at least 4.5:1 contrast ratio for readability. Low contrast makes content hard to read, especially for users with visual impairments (WCAG AA)')
-  tips.push('Use font sizes of 12pt (16px) or larger for body text. Smaller text reduces readability, especially when viewed from a distance')
-  tips.push('Maintain adequate spacing between elements (minimum 8px). Proper spacing improves visual hierarchy and prevents elements from appearing cluttered')
-  tips.push('Keep line height at 1.5x font size for comfortable reading. Insufficient line spacing makes text difficult to scan and can cause eye strain')
+  // Dynamic WCAG violation tips - only show if violations exist
+  let contrastViolations = 0
+  let fontSizeViolations = 0
+  let lineHeightViolations = 0
   
-  return tips.slice(0, 8) // Limit to 8 tips max (increased to accommodate WCAG tips)
+  canvasElements.forEach(element => {
+    if (element.type === 'text') {
+      const textColor = element.color || '#000000'
+      const elementBg = element.backgroundColor && element.backgroundColor !== 'transparent' 
+        ? element.backgroundColor 
+        : background
+      const fontSize = element.fontSize || 16
+      const isBold = (element.fontWeight || 400) >= 700
+      
+      const contrastCheck = checkContrastWCAG(textColor, elementBg, fontSize, isBold)
+      if (!contrastCheck.passes) contrastViolations++
+      
+      const elementStyle = element.style || 'body'
+      const fontSizeCheck = checkFontSize(fontSize, elementStyle)
+      if (!fontSizeCheck.passes) fontSizeViolations++
+      
+      const lineHeightCheck = checkLineHeight(fontSize, element.lineHeight)
+      if (!lineHeightCheck.passes) lineHeightViolations++
+    }
+  })
+  
+  // Add actionable WCAG tips only if violations exist
+  if (contrastViolations > 0) {
+    tips.push({
+      type: 'wcag-tip',
+      category: 'contrast',
+      message: `WCAG 1.4.3: ${contrastViolations} element${contrastViolations > 1 ? 's have' : ' has'} low contrast`,
+      rationale: 'Text needs at least 4.5:1 contrast ratio for readability. Low contrast makes content hard to read, especially for users with visual impairments.',
+      action: 'check-elements',
+      priority: 'high'
+    })
+  }
+  
+  if (fontSizeViolations > 0) {
+    tips.push({
+      type: 'wcag-tip',
+      category: 'font-size',
+      message: `WCAG 1.4.4: ${fontSizeViolations} element${fontSizeViolations > 1 ? 's have' : ' has'} font size below 12pt`,
+      rationale: 'Font sizes below 12pt (16px) reduce readability, especially when viewed from a distance. Text should remain readable when zoomed.',
+      action: 'check-elements',
+      priority: 'medium'
+    })
+  }
+  
+  if (lineHeightViolations > 0) {
+    tips.push({
+      type: 'wcag-tip',
+      category: 'line-height',
+      message: `WCAG 1.4.12: ${lineHeightViolations} element${lineHeightViolations > 1 ? 's have' : ' has'} insufficient line spacing`,
+      rationale: 'Line height should be 1.5x font size. Adequate spacing improves readability and makes text easier to scan, reducing eye strain.',
+      action: 'check-elements',
+      priority: 'medium'
+    })
+  }
+  
+  // Only show static tips if no violations (positive reinforcement)
+  if (contrastViolations === 0 && fontSizeViolations === 0 && lineHeightViolations === 0 && canvasElements.length > 0) {
+    tips.push('✓ All text elements meet WCAG contrast requirements (4.5:1)')
+    tips.push('✓ All text elements use readable font sizes (12pt+)')
+    tips.push('✓ All text elements have adequate line spacing (1.5x)')
+  }
+  
+  return tips.slice(0, 10) // Limit to 10 tips max
 }
 
 /**
@@ -422,21 +486,26 @@ export const getSuggestions = (template, canvasElements = []) => {
   // Check color matching with ALL suggested colors
   const colorMatching = checkColorMatching(template, canvasElements, colors)
   
-  // Calculate overall score: 50% completeness, 25% font matching, 25% color matching
+  // Calculate WCAG compliance score
+  const canvasBackground = template?.layout?.background || null
+  const wcagScore = calculateWCAGScore(canvasElements, canvasBackground)
+  
+  // Calculate overall score: 40% completeness, 20% font matching, 20% color matching, 20% WCAG compliance
   const overallScore = Math.round(
-    (completeness.score * 0.5) + 
-    (fontMatching.score * 0.25) + 
-    (colorMatching.score * 0.25)
+    (completeness.score * 0.4) + 
+    (fontMatching.score * 0.2) + 
+    (colorMatching.score * 0.2) +
+    (wcagScore * 0.2)
   )
   
-  // Generate tips
-  const tips = generateTemplateTips(template, completeness, fontMatching, colorMatching)
+  // Generate tips with WCAG violation detection
+  const tips = generateTemplateTips(template, completeness, fontMatching, colorMatching, canvasElements, canvasBackground)
   
   // For display, use all template fonts
   const fonts = allSuggestedFonts
   
   // Generate element-specific suggestions (use all fonts, not just displayed ones)
-  const elementSuggestions = generateElementSuggestions(template, canvasElements, allSuggestedFonts, colors)
+  const elementSuggestions = generateElementSuggestions(template, canvasElements, allSuggestedFonts, colors, canvasBackground)
   
   console.log('Generated element suggestions:', elementSuggestions.length, elementSuggestions)
 
@@ -444,6 +513,7 @@ export const getSuggestions = (template, canvasElements = []) => {
     completeness: completeness.score,
     fontMatching: fontMatching.score,
     colorMatching: colorMatching.score,
+    wcagCompliance: wcagScore,
     overallScore
   })
   
@@ -482,11 +552,54 @@ const getUsedColors = (canvasElements) => {
   return Array.from(colors)
 }
 
+// Calculate WCAG compliance score (0-100)
+const calculateWCAGScore = (canvasElements, canvasBackground) => {
+  if (!canvasElements || canvasElements.length === 0) return 100
+  
+  const background = canvasBackground || '#ffffff'
+  let violations = 0
+  let totalChecks = 0
+  
+  canvasElements.forEach(element => {
+    if (element.type === 'text') {
+      // Check contrast
+      const textColor = element.color || '#000000'
+      const elementBg = element.backgroundColor && element.backgroundColor !== 'transparent' 
+        ? element.backgroundColor 
+        : background
+      const fontSize = element.fontSize || 16
+      const isBold = (element.fontWeight || 400) >= 700
+      
+      const contrastCheck = checkContrastWCAG(textColor, elementBg, fontSize, isBold)
+      totalChecks++
+      if (!contrastCheck.passes) violations++
+      
+      // Check font size
+      const elementStyle = element.style || 'body'
+      const fontSizeCheck = checkFontSize(fontSize, elementStyle)
+      totalChecks++
+      if (!fontSizeCheck.passes) violations++
+      
+      // Check line height
+      const lineHeightCheck = checkLineHeight(fontSize, element.lineHeight)
+      totalChecks++
+      if (!lineHeightCheck.passes) violations++
+    }
+  })
+  
+  if (totalChecks === 0) return 100
+  const score = Math.round(((totalChecks - violations) / totalChecks) * 100)
+  return score
+}
+
 // Generate element-specific suggestions (Grammarly-style)
-const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors) => {
+const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors, canvasBackground = null) => {
   const suggestions = []
   
   if (!template?.layout?.elements) return suggestions
+  
+  // Get canvas background for contrast checks
+  const background = canvasBackground || template?.layout?.background || '#ffffff'
   
   // Check for missing elements
   const templateElementIds = new Set(template.layout.elements.map(el => el.id))
@@ -507,6 +620,74 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
   // Check each canvas element for improvements
   canvasElements.forEach(element => {
     if (element.type === 'text') {
+      // WCAG Contrast Check
+      const textColor = element.color || '#000000'
+      const elementBg = element.backgroundColor && element.backgroundColor !== 'transparent' 
+        ? element.backgroundColor 
+        : background
+      const fontSize = element.fontSize || 16
+      const isBold = (element.fontWeight || 400) >= 700
+      
+      const contrastCheck = checkContrastWCAG(textColor, elementBg, fontSize, isBold)
+      
+      if (!contrastCheck.passes) {
+        const fixOptions = generateContrastOptions(textColor, elementBg, fontSize, isBold)
+        suggestions.push({
+          type: 'contrast-warning',
+          elementId: element.id,
+          message: `Text contrast is too low (${contrastCheck.ratio}:1)`,
+          rationale: contrastCheck.rationale,
+          currentRatio: contrastCheck.ratio,
+          requiredRatio: contrastCheck.requiredRatio,
+          level: contrastCheck.level,
+          options: fixOptions,
+          action: 'update',
+          priority: 'high'
+        })
+      }
+      
+      // WCAG Font Size Check
+      const elementStyle = element.style || 'body'
+      const fontSizeCheck = checkFontSize(fontSize, elementStyle)
+      
+      if (!fontSizeCheck.passes) {
+        suggestions.push({
+          type: 'font-size-warning',
+          elementId: element.id,
+          message: `Font size is too small (${fontSizeCheck.currentSize}pt)`,
+          rationale: fontSizeCheck.rationale,
+          currentSize: fontSizeCheck.currentSize,
+          minSize: fontSizeCheck.minSize,
+          options: [
+            { name: `${fontSizeCheck.minSize}pt`, value: fontSizeCheck.minSize },
+            { name: `${fontSizeCheck.minSize + 2}pt`, value: fontSizeCheck.minSize + 2 },
+            { name: `${fontSizeCheck.minSize + 4}pt`, value: fontSizeCheck.minSize + 4 }
+          ],
+          action: 'update',
+          priority: 'medium'
+        })
+      }
+      
+      // WCAG Line Height Check
+      const lineHeightCheck = checkLineHeight(fontSize, element.lineHeight)
+      
+      if (!lineHeightCheck.passes) {
+        suggestions.push({
+          type: 'line-height-warning',
+          elementId: element.id,
+          message: `Line height is insufficient (${lineHeightCheck.currentRatio}x)`,
+          rationale: lineHeightCheck.rationale,
+          currentRatio: lineHeightCheck.currentRatio,
+          recommended: lineHeightCheck.recommended,
+          options: [
+            { name: `${lineHeightCheck.recommended}x`, value: lineHeightCheck.recommended },
+            { name: `${lineHeightCheck.recommended + 0.1}x`, value: lineHeightCheck.recommended + 0.1 }
+          ],
+          action: 'update',
+          priority: 'medium'
+        })
+      }
+      
       const normalizedFont = normalizeFont(element.font)
       const normalizedSuggestedFonts = suggestedFonts.map(normalizeFont)
       

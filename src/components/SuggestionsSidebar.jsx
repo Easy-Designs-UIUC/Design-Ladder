@@ -84,15 +84,81 @@ function SuggestionsSidebar({ suggestions, onApplySuggestion, selectedElement, c
                   const isFontGroup = suggestion.type === 'font-group'
                   const isTextColorGroup = suggestion.type === 'text-color-group'
                   const isBgColorGroup = suggestion.type === 'background-color-group'
+                  const isContrastWarning = suggestion.type === 'contrast-warning'
+                  const isFontSizeWarning = suggestion.type === 'font-size-warning'
+                  const isLineHeightWarning = suggestion.type === 'line-height-warning'
                   const isColorGroup = isTextColorGroup || isBgColorGroup
+                  const isWCAGWarning = isContrastWarning || isFontSizeWarning || isLineHeightWarning
                   
                   return (
                     <div key={index} className="grammarly-card">
                       <div className="card-icon">
-                        {isFontGroup ? '🔤' : isColorGroup ? '🎨' : '✨'}
+                        {isFontGroup ? '🔤' : isColorGroup ? '🎨' : isWCAGWarning ? '⚠️' : '✨'}
                       </div>
                       <div className="card-content">
                         <div className="card-message">{suggestion.message}</div>
+                        
+                        {/* WCAG Rationale */}
+                        {suggestion.rationale && (
+                          <div className="card-rationale">
+                            {suggestion.rationale}
+                          </div>
+                        )}
+                        
+                        {/* Contrast Warning Options */}
+                        {isContrastWarning && suggestion.options && (
+                          <div className="card-options color-options">
+                            {suggestion.options.map((option, optIndex) => (
+                              <button
+                                key={optIndex}
+                                className="option-btn color-option"
+                                onClick={() => {
+                                  if (option.type === 'text-color') {
+                                    onApplySuggestion('text-color', option.hex)
+                                  } else if (option.type === 'background-color') {
+                                    onApplySuggestion('color', option.hex)
+                                  }
+                                }}
+                              >
+                                <span 
+                                  className="color-option-swatch" 
+                                  style={{ backgroundColor: option.hex }}
+                                />
+                                {option.name} ({option.ratio}:1)
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Font Size Warning Options */}
+                        {isFontSizeWarning && suggestion.options && (
+                          <div className="card-options">
+                            {suggestion.options.map((option, optIndex) => (
+                              <button
+                                key={optIndex}
+                                className="option-btn"
+                                onClick={() => onApplySuggestion('fontSize', option.value)}
+                              >
+                                {option.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Line Height Warning Options */}
+                        {isLineHeightWarning && suggestion.options && (
+                          <div className="card-options">
+                            {suggestion.options.map((option, optIndex) => (
+                              <button
+                                key={optIndex}
+                                className="option-btn"
+                                onClick={() => onApplySuggestion('lineHeight', option.value)}
+                              >
+                                {option.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         
                         {isFontGroup && (
                           <div className="card-options">
@@ -154,12 +220,34 @@ function SuggestionsSidebar({ suggestions, onApplySuggestion, selectedElement, c
           <div className="suggestions-tips">
             <h3 className="tips-title">💡 General Tips</h3>
             <div className="tips-cards">
-              {suggestions.suggestions.map((tip, index) => (
-                <div key={index} className="tip-card">
-                  <span className="tip-bullet">•</span>
-                  <span className="tip-text">{tip}</span>
-                </div>
-              ))}
+              {suggestions.suggestions.map((tip, index) => {
+                // Handle actionable WCAG tips
+                if (typeof tip === 'object' && tip.type === 'wcag-tip') {
+                  return (
+                    <div key={index} className="tip-card wcag-tip-card">
+                      <div className="tip-header">
+                        <span className="tip-icon">⚠️</span>
+                        <span className="tip-text tip-message">{tip.message}</span>
+                      </div>
+                      {tip.rationale && (
+                        <div className="tip-rationale">{tip.rationale}</div>
+                      )}
+                      {tip.action === 'check-elements' && (
+                        <div className="tip-action-hint">
+                          Select elements above to see specific fixes
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+                // Handle regular string tips
+                return (
+                  <div key={index} className="tip-card">
+                    <span className="tip-bullet">•</span>
+                    <span className="tip-text">{tip}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

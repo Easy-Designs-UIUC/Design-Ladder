@@ -26,6 +26,22 @@ An educational tool that guides novices in creating posters by providing smart s
   - Design score indicator
   - Contextual tips
 
+## Implementation Strategy (If Novel)
+
+The novel aspects of this implementation are the **design score** and the **contextual suggestion system**:
+
+**Design Score**: A real-time quality metric calculated from three components:
+- 50% Completeness: All template elements (by ID) must be present
+- 25% Font Matching: Percentage of elements using template-suggested fonts
+- 25% Color Matching: Percentage of elements using template-suggested colors
+
+**Contextual Suggestions**: Grammarly-style suggestion cards that dynamically appear/disappear:
+- Font cards only appear when the selected element's font doesn't match template suggestions
+- Color cards only appear when text or background colors don't match template suggestions
+- Cards automatically disappear when any correct option is applied
+- Cards reappear if the user changes back to an incorrect option
+- This provides focused, actionable feedback without overwhelming the interface
+
 ## Getting Started
 
 ### Prerequisites

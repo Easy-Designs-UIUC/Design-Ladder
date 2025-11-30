@@ -65,7 +65,7 @@ const normalizeTemplateElements = (elements = []) =>
       id: element.id || `element-${index}`,
       type: 'element',
       elementType: element.elementType || (typeof element.style === 'string' ? element.style : 'illustration'),
-      icon: element.icon || '⭐',
+      icon: element.icon || '',
       x: x,
       y: y
     }
@@ -96,29 +96,24 @@ function EditorPage() {
   const [showProjectNameModal, setShowProjectNameModal] = useState(false)
   const [projectNameInput, setProjectNameInput] = useState('')
   const [canvasBackground, setCanvasBackground] = useState(initialTemplateState.background)
+  const [ignoredSuggestions, setIgnoredSuggestions] = useState(new Set())
   const canvasRef = useRef(null)
   const lastLoadedProjectId = useRef(null)
   const lastLoadedTemplateId = useRef(null)
   const lastLoadedProjectDate = useRef(null) // Track when we last loaded the project to detect saves
   const hasClearedQuizSelections = useRef(false)
   const projectNameInputRef = useRef(null)
-
-
-  // Recalculate suggestions IMMEDIATELY when template or canvas elements change
-  // This ensures suggestions update after EVERY font/color/element change
-  const suggestions = useMemo(() => {
-    console.log('Recalculating suggestions...', {
-      template: appState.selectedTemplate?.name,
-      elementCount: canvasElements.length,
-      elements: canvasElements.map(el => ({ id: el.id, font: el.font, color: el.color }))
-    })
-    return getSuggestions(appState.selectedTemplate, canvasElements)
-  }, [appState.selectedTemplate, canvasElements])
+  const selectedColorsRef = useRef([])
 
   // Clear quiz selections when first reaching the editor page
   // Note: We keep selectedTemplate so it can populate the canvas
+  // Store colors before clearing for color scheme checking
   useEffect(() => {
     if (!hasClearedQuizSelections.current) {
+      // Store colors before clearing
+      if (appState.colors?.length > 0) {
+        selectedColorsRef.current = appState.colors
+      }
       // Only clear if there are quiz selections present
       if (appState.posterType || appState.topics?.length > 0 || appState.colors?.length > 0) {
         setAppState(prev => ({
@@ -132,6 +127,49 @@ function EditorPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount
+
+  // Recalculate suggestions IMMEDIATELY when template or canvas elements change
+  // This ensures suggestions update after EVERY font/color/element change
+  const suggestions = useMemo(() => {
+    console.log('Recalculating suggestions...', {
+      template: appState.selectedTemplate?.name,
+      elementCount: canvasElements.length,
+      elements: canvasElements.map(el => ({ id: el.id, font: el.font, color: el.color }))
+    })
+    const baseSuggestions = getSuggestions(
+      appState.selectedTemplate, 
+      canvasElements, 
+      canvasBackground,
+      selectedColorsRef.current
+    )
+    
+    // Filter out ignored suggestions and recalculate score
+    if (ignoredSuggestions.size > 0 && baseSuggestions.elementSuggestions) {
+      const filteredSuggestions = baseSuggestions.elementSuggestions.filter((suggestion, index) => {
+        const key = `${suggestion.elementId}-${suggestion.type}-${index}`
+        return !ignoredSuggestions.has(key)
+      })
+      
+      // Calculate score adjustment based on ignored suggestions
+      // Each ignored suggestion improves the score since it's no longer counted as an issue
+      const ignoredCount = baseSuggestions.elementSuggestions.length - filteredSuggestions.length
+      const totalSuggestions = baseSuggestions.elementSuggestions.length
+      
+      // Score improvement: each ignored suggestion represents an issue that's been acknowledged
+      // Max improvement is capped at 20 points (to prevent abuse)
+      const maxImprovement = 20
+      const improvementPerSuggestion = totalSuggestions > 0 ? (maxImprovement / totalSuggestions) : 0
+      const scoreImprovement = Math.min(maxImprovement, ignoredCount * improvementPerSuggestion)
+      
+      return {
+        ...baseSuggestions,
+        elementSuggestions: filteredSuggestions,
+        designScore: Math.min(100, baseSuggestions.designScore + scoreImprovement)
+      }
+    }
+    
+    return baseSuggestions
+  }, [appState.selectedTemplate, canvasElements, canvasBackground, ignoredSuggestions])
 
   const addToHistory = useCallback((newElements) => {
     const newHistory = history.slice(0, historyIndex + 1)
@@ -596,13 +634,46 @@ function EditorPage() {
   }, [selectedElement])
 
 
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(240)
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(280)
+  const [isResizingLeft, setIsResizingLeft] = useState(false)
+  const [isResizingRight, setIsResizingRight] = useState(false)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isResizingLeft) {
+        const newWidth = Math.max(180, Math.min(400, e.clientX))
+        setLeftSidebarWidth(newWidth)
+      }
+      if (isResizingRight) {
+        const newWidth = Math.max(220, Math.min(500, window.innerWidth - e.clientX))
+        setRightSidebarWidth(newWidth)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false)
+      setIsResizingRight(false)
+    }
+
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isResizingLeft, isResizingRight])
+
   return (
     <div className="editor-page">
       <div className="editor-header">
         <h1 className="app-logo">DESIGN LADDER</h1>
       </div>
       <div className="editor-container">
-        <LeftToolbar
+        <div className="left-sidebar-wrapper" style={{ width: `${leftSidebarWidth}px` }}>
+          <LeftToolbar
           onAddElement={handleAddElement}
           onUpdateElement={handleUpdateElement}
           selectedElement={selectedElement}
@@ -617,13 +688,19 @@ function EditorPage() {
           template={appState.selectedTemplate}
           hasUnsavedChanges={hasUnsavedChanges}
         />
-        
-        <div className="editor-center">
-          <div className="editor-toolbar">
-            <button
-              className="undo-redo-btn"
-              onClick={handleUndo}
-              disabled={historyIndex === 0}
+
+        <div 
+          className="resize-handle resize-handle-right"
+          onMouseDown={() => setIsResizingLeft(true)}
+        />
+      </div>
+
+      <div className="editor-center">
+        <div className="editor-toolbar">
+          <button
+            className="undo-redo-btn"
+            onClick={handleUndo}
+            disabled={historyIndex === 0}
             >
               UNDO
             </button>
@@ -648,25 +725,43 @@ function EditorPage() {
           />
         </div>
 
-        <SuggestionsSidebar
-          suggestions={suggestions}
-          selectedElement={selectedElement}
-          canvasElements={canvasElements}
-          onApplySuggestion={(type, value) => {
-            if (selectedElement) {
-              console.log('🎨 Applying suggestion:', { type, value, selectedElement })
-              if (type === 'font') {
-                handleUpdateElement(selectedElement, { font: value })
-              } else if (type === 'color' || type === 'background-color') {
-                console.log('Setting backgroundColor to:', value)
-                handleUpdateElement(selectedElement, { backgroundColor: value })
-              } else if (type === 'text-color') {
-                console.log('Setting text color to:', value)
-                handleUpdateElement(selectedElement, { color: value })
+        <div className="right-sidebar-wrapper" style={{ width: `${rightSidebarWidth}px` }}>
+          <div 
+            className="resize-handle resize-handle-left"
+            onMouseDown={() => setIsResizingRight(true)}
+          />
+          <SuggestionsSidebar
+            suggestions={suggestions}
+            selectedElement={selectedElement}
+            canvasElements={canvasElements}
+            ignoredSuggestions={ignoredSuggestions}
+            onSelectElement={setSelectedElement}
+            onIgnoreSuggestion={(suggestionKey) => {
+              setIgnoredSuggestions(prev => new Set([...prev, suggestionKey]))
+            }}
+            onUnignoreSuggestion={(suggestionKey) => {
+              setIgnoredSuggestions(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(suggestionKey)
+                return newSet
+              })
+            }}
+            onApplySuggestion={(type, value) => {
+              if (selectedElement) {
+                console.log('Applying suggestion:', { type, value, selectedElement })
+                if (type === 'font') {
+                  handleUpdateElement(selectedElement, { font: value })
+                } else if (type === 'color' || type === 'background-color') {
+                  console.log('Setting backgroundColor to:', value)
+                  handleUpdateElement(selectedElement, { backgroundColor: value })
+                } else if (type === 'text-color') {
+                  console.log('Setting text color to:', value)
+                  handleUpdateElement(selectedElement, { color: value })
+                }
               }
-            }
-          }}
-        />
+            }}
+          />
+        </div>
       </div>
       {showSaveConfirm && (
         <div className="save-confirm">

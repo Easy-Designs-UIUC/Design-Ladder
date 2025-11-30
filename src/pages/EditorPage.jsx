@@ -481,6 +481,7 @@ function EditorPage() {
           onSelectProject={handleProjectSelect}
           suggestions={suggestions}
           template={appState.selectedTemplate}
+          canvasElements={canvasElements}
         />
         
         <div className="editor-center">

@@ -21,7 +21,18 @@
   min-height: 0;
 }
 
-.toolbar-nav { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 0.5rem; }
+/* Navigation Section - Separated visually */
+.toolbar-nav-section {
+  border-bottom: 2px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.toolbar-nav { 
+  padding: 1rem; 
+  display: flex; 
+  gap: 0.5rem; 
+}
 .nav-btn {
   flex: 1;
   padding: 0.6rem;
@@ -88,9 +99,89 @@
   opacity: 0.7;
 }
 
+/* Quick Help Section */
+.quick-help-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 8px;
+}
+
+.help-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.help-icon {
+  font-size: 1.2rem;
+}
+
+.help-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.help-text strong {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* Control Sections */
+.control-section {
+  margin-bottom: 2rem;
+}
+
+.add-elements-section {
+  border-bottom: 2px solid var(--card-border);
+  padding-bottom: 1.5rem;
+}
+
+.edit-style-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--card-border);
+}
+
+.section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: normal;
+  font-style: italic;
+}
+
 .toolbar-menus {
   flex: 1;
-  padding: 1rem;
 }
 
 .menu-section {
@@ -113,8 +204,18 @@
   color: var(--text);
 }
 
-.menu-toggle:hover {
+.menu-toggle:hover:not(.disabled) {
   background: rgba(255,255,255,0.05);
+}
+
+.menu-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255,255,255,0.02);
+}
+
+.menu-toggle.disabled:hover {
+  background: rgba(255,255,255,0.02);
 }
 
 .menu-content {
@@ -164,9 +265,18 @@
   color: var(--text);
 }
 
-.submenu-item:hover {
+.submenu-item:hover:not(:disabled) {
   background: rgba(255,255,255,0.05);
   border-color: var(--accent-cyan);
+}
+
+.submenu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.font-option {
+  font-family: inherit;
 }
 
 .elements-grid {

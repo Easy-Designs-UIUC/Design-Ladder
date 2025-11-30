@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getColorHex, COLOR_MAP } from '../utils/colorUtils'
 import './LeftToolbar.css'
 
-function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template }) {
+function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template, canvasElements = [] }) {
   const navigate = useNavigate()
   const [expandedMenu, setExpandedMenu] = useState(null)
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)
@@ -132,53 +132,82 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
     handleDownload(format)
   }
 
+  // Check if selected element is text type
+  const isTextElement = selectedElement && canvasElements.find(el => el.id === selectedElement)?.type === 'text'
+  const hasSelectedElement = !!selectedElement
+
   return (
     <div className="left-toolbar">
-      <div className="toolbar-nav">
-        <button className="nav-btn" onClick={() => navigate('/')}>
-          Home
-        </button>
-        <button 
-          className="nav-btn"
-          onClick={() => setShowProjects(!showProjects)}
-        >
-          Projects
-        </button>
+      {/* Navigation Section - Separated */}
+      <div className="toolbar-nav-section">
+        <div className="toolbar-nav">
+          <button className="nav-btn" onClick={() => navigate('/')} title="Return to home page">
+            🏠 Home
+          </button>
+          <button 
+            className="nav-btn"
+            onClick={() => setShowProjects(!showProjects)}
+            title="View saved projects"
+          >
+            📁 Projects
+          </button>
+        </div>
+
+        {showProjects && (
+          <div className="projects-list">
+            <h3 className="projects-title">Saved Projects</h3>
+            {projects.map((project) => (
+              <button
+                key={project.id}
+                className={`project-item ${activeProjectId === project.id ? 'active' : ''}`}
+                onClick={() => {
+                  onSelectProject(project.id)
+                  setShowProjects(false)
+                }}
+              >
+                <span className="project-name">{project.name}</span>
+                <span className="project-date">{project.date}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {showProjects && (
-        <div className="projects-list">
-          <h3 className="projects-title">Saved Projects</h3>
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              className={`project-item ${activeProjectId === project.id ? 'active' : ''}`}
-              onClick={() => {
-                onSelectProject(project.id)
-                setShowProjects(false)
-              }}
-            >
-              <span className="project-name">{project.name}</span>
-              <span className="project-date">{project.date}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="left-toolbar-scrollable">
+        {/* Quick Help Section */}
+        {!hasSelectedElement && (
+          <div className="quick-help-section">
+            <div className="help-header">
+              <span className="help-icon">💡</span>
+              <span className="help-title">Quick Start</span>
+            </div>
+            <div className="help-content">
+              <p className="help-text">• Click <strong>Text</strong> or <strong>Elements</strong> to add content</p>
+              <p className="help-text">• Click any element on canvas to edit its style</p>
+              <p className="help-text">• Use <strong>Background</strong> to change canvas color</p>
+            </div>
+          </div>
+        )}
+
         <div className="toolbar-menus">
+          {/* Add Elements Section */}
+          <div className="control-section add-elements-section">
+            <h3 className="section-title">➕ Add Elements</h3>
+          {/* Text Styles - Add Element */}
           <div className="menu-section">
             <button
               className="menu-toggle"
               onClick={() => toggleMenu('text')}
+              title="Add text elements to your poster"
             >
-              Text {expandedMenu === 'text' ? '−' : '+'}
+              📝 Text {expandedMenu === 'text' ? '−' : '+'}
             </button>
             {expandedMenu === 'text' && (
               <div className="menu-content">
                 <button
                   className="submenu-toggle"
                   onClick={() => setExpandedSubmenu(expandedSubmenu === 'styles' ? null : 'styles')}
+                  title="Choose a text style to add"
                 >
                   Styles {expandedSubmenu === 'styles' ? '−' : '+'}
                 </button>
@@ -189,41 +218,120 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
                         key={style}
                         className="submenu-item"
                         onClick={() => handleTextStyleClick(style)}
+                        title={`Add ${style} text element`}
                       >
                         {style}
                       </button>
                     ))}
                   </div>
                 )}
-                
+              </div>
+            )}
+          </div>
+
+          {/* Elements - Add Element */}
+          <div className="menu-section">
+            <button
+              className="menu-toggle"
+              onClick={() => toggleMenu('elements')}
+              title="Add icons and visual elements"
+            >
+              🎨 Elements {expandedMenu === 'elements' ? '−' : '+'}
+            </button>
+            {expandedMenu === 'elements' && (
+              <div className="menu-content elements-grid">
+                {elements.map((element) => (
+                  <button
+                    key={element.id}
+                    className="element-item"
+                    onClick={() => handleElementClick(element)}
+                    title={`Add ${element.name} element`}
+                  >
+                    {element.icon}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Background - Add Element */}
+          <div className="menu-section">
+            <button
+              className="menu-toggle"
+              onClick={() => toggleMenu('background')}
+              title="Change the canvas background color"
+            >
+              🎨 Background {expandedMenu === 'background' ? '−' : '+'}
+            </button>
+            {expandedMenu === 'background' && (
+              <div className="menu-content backgrounds-grid">
+                {backgroundColors.length > 0 ? (
+                  backgroundColors.map((bg) => (
+                    <button
+                      key={bg.id}
+                      className="background-item"
+                      onClick={() => handleBackgroundClick(bg)}
+                      style={{ backgroundColor: bg.color }}
+                      title={`Set background to ${bg.name}`}
+                    />
+                  ))
+                ) : (
+                  <div className="no-items">No background colors available</div>
+                )}
+              </div>
+            )}
+          </div>
+          </div>
+        </div>
+
+        {/* Edit Style Section - Only shown when element is selected */}
+        {hasSelectedElement && (
+          <div className="control-section edit-style-section">
+            <h3 className="section-title">
+              ✏️ Edit Selected Element
+              {!isTextElement && <span className="edit-hint">(Text controls only)</span>}
+            </h3>
+            
+            <div className="toolbar-menus">
+              {/* Font - Edit Style */}
+              <div className="menu-section">
                 <button
-                  className="submenu-toggle"
-                  onClick={() => setExpandedSubmenu(expandedSubmenu === 'font' ? null : 'font')}
+                  className={`menu-toggle ${!isTextElement ? 'disabled' : ''}`}
+                  onClick={() => isTextElement && toggleMenu('font')}
+                  disabled={!isTextElement}
+                  title={isTextElement ? "Change the font family" : "Select a text element to edit font"}
                 >
-                  Font {expandedSubmenu === 'font' ? '−' : '+'}
+                  🔤 Font {expandedMenu === 'font' ? '−' : '+'}
                 </button>
-                {expandedSubmenu === 'font' && (
-                  <div className="submenu-content">
+                {expandedMenu === 'font' && isTextElement && (
+                  <div className="menu-content">
                     {fonts.map((font) => (
                       <button
                         key={font}
-                        className="submenu-item"
+                        className="submenu-item font-option"
                         onClick={() => handleFontClick(font)}
+                        style={{ fontFamily: font }}
+                        title={`Change font to ${font}`}
                       >
                         {font}
                       </button>
                     ))}
                   </div>
                 )}
+              </div>
 
+              {/* Text Color - Edit Style */}
+              <div className="menu-section">
                 <button
-                  className="submenu-toggle"
-                  onClick={() => setExpandedSubmenu(expandedSubmenu === 'textColor' ? null : 'textColor')}
+                  className={`menu-toggle ${!isTextElement ? 'disabled' : ''}`}
+                  onClick={() => isTextElement && setExpandedSubmenu(expandedSubmenu === 'textColor' ? null : 'textColor')}
+                  disabled={!isTextElement}
+                  title={isTextElement ? "Change the text color" : "Select a text element to edit color"}
                 >
-                  Text Color {expandedSubmenu === 'textColor' ? '−' : '+'}
+                  🎨 Text Color {expandedSubmenu === 'textColor' ? '−' : '+'}
                 </button>
-                {expandedSubmenu === 'textColor' && (
-                  <div className="submenu-content" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {expandedSubmenu === 'textColor' && isTextElement && (
+                  <div className="menu-content" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {allColors.map((colorName) => {
                       const colorHex = getColorHex(colorName)
                       return (
@@ -236,6 +344,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
                             alignItems: 'center',
                             gap: '8px'
                           }}
+                          title={`Change text color to ${colorName}`}
                         >
                           <span
                             className="color-preview"
@@ -254,15 +363,20 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
                     })}
                   </div>
                 )}
+              </div>
 
+              {/* Element Background - Edit Style */}
+              <div className="menu-section">
                 <button
-                  className="submenu-toggle"
-                  onClick={() => setExpandedSubmenu(expandedSubmenu === 'elementBg' ? null : 'elementBg')}
+                  className={`menu-toggle ${!isTextElement ? 'disabled' : ''}`}
+                  onClick={() => isTextElement && setExpandedSubmenu(expandedSubmenu === 'elementBg' ? null : 'elementBg')}
+                  disabled={!isTextElement}
+                  title={isTextElement ? "Change the element background color" : "Select a text element to edit background"}
                 >
-                  Element Background {expandedSubmenu === 'elementBg' ? '−' : '+'}
+                  🎨 Element Background {expandedSubmenu === 'elementBg' ? '−' : '+'}
                 </button>
-                {expandedSubmenu === 'elementBg' && (
-                  <div className="submenu-content" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {expandedSubmenu === 'elementBg' && isTextElement && (
+                  <div className="menu-content" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {allColors.map((colorName) => {
                       const colorHex = getColorHex(colorName)
                       return (
@@ -275,6 +389,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
                             alignItems: 'center',
                             gap: '8px'
                           }}
+                          title={`Change background to ${colorName}`}
                         >
                           <span
                             className="color-preview"
@@ -294,58 +409,9 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
-
-          <div className="menu-section">
-            <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('elements')}
-            >
-              Elements {expandedMenu === 'elements' ? '−' : '+'}
-            </button>
-            {expandedMenu === 'elements' && (
-              <div className="menu-content elements-grid">
-                {elements.map((element) => (
-                  <button
-                    key={element.id}
-                    className="element-item"
-                    onClick={() => handleElementClick(element)}
-                    title={element.name}
-                  >
-                    {element.icon}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="menu-section">
-            <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('background')}
-            >
-              Background {expandedMenu === 'background' ? '−' : '+'}
-            </button>
-            {expandedMenu === 'background' && (
-              <div className="menu-content backgrounds-grid">
-                {backgroundColors.length > 0 ? (
-                  backgroundColors.map((bg) => (
-                    <button
-                      key={bg.id}
-                      className="background-item"
-                      onClick={() => handleBackgroundClick(bg)}
-                      style={{ backgroundColor: bg.color }}
-                      title={bg.name}
-                    />
-                  ))
-                ) : (
-                  <div className="no-items">No background colors available</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
       <div className="left-savebar">
         <button className="save-btn" onClick={handleSave}>

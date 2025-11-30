@@ -128,14 +128,8 @@ function EditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount
 
-  // Recalculate suggestions IMMEDIATELY when template or canvas elements change
-  // This ensures suggestions update after EVERY font/color/element change
+  // Recalculate suggestions when template or canvas elements change
   const suggestions = useMemo(() => {
-    console.log('Recalculating suggestions...', {
-      template: appState.selectedTemplate?.name,
-      elementCount: canvasElements.length,
-      elements: canvasElements.map(el => ({ id: el.id, font: el.font, color: el.color }))
-    })
     const baseSuggestions = getSuggestions(
       appState.selectedTemplate, 
       canvasElements, 
@@ -143,28 +137,45 @@ function EditorPage() {
       selectedColorsRef.current
     )
     
+    // If no template selected, return base suggestions with 0 score
+    if (!appState.selectedTemplate) {
+      return {
+        ...baseSuggestions,
+        designScore: 0
+      }
+    }
+    
     // Filter out ignored suggestions and recalculate score
-    if (ignoredSuggestions.size > 0 && baseSuggestions.elementSuggestions) {
-      const filteredSuggestions = baseSuggestions.elementSuggestions.filter((suggestion, index) => {
+    const elementSuggestions = baseSuggestions.elementSuggestions || []
+    
+    if (ignoredSuggestions.size > 0 && elementSuggestions.length > 0) {
+      const filteredSuggestions = elementSuggestions.filter((suggestion, index) => {
         const key = `${suggestion.elementId}-${suggestion.type}-${index}`
         return !ignoredSuggestions.has(key)
       })
       
-      // Calculate score adjustment based on ignored suggestions
-      // Each ignored suggestion improves the score since it's no longer counted as an issue
-      const ignoredCount = baseSuggestions.elementSuggestions.length - filteredSuggestions.length
-      const totalSuggestions = baseSuggestions.elementSuggestions.length
+      const ignoredCount = elementSuggestions.length - filteredSuggestions.length
+      const totalSuggestions = elementSuggestions.length
       
-      // Score improvement: each ignored suggestion represents an issue that's been acknowledged
-      // Max improvement is capped at 20 points (to prevent abuse)
-      const maxImprovement = 20
-      const improvementPerSuggestion = totalSuggestions > 0 ? (maxImprovement / totalSuggestions) : 0
-      const scoreImprovement = Math.min(maxImprovement, ignoredCount * improvementPerSuggestion)
+      // If all suggestions are ignored, score goes to 100%
+      if (ignoredCount === totalSuggestions && totalSuggestions > 0) {
+        return {
+          ...baseSuggestions,
+          elementSuggestions: filteredSuggestions,
+          designScore: 100
+        }
+      }
+      
+      // Calculate proportional improvement based on ignored suggestions
+      // Each ignored suggestion contributes proportionally to the gap between current score and 100%
+      const scoreGap = 100 - baseSuggestions.designScore
+      const improvementPerSuggestion = totalSuggestions > 0 ? (scoreGap / totalSuggestions) : 0
+      const scoreImprovement = Math.round(ignoredCount * improvementPerSuggestion)
       
       return {
         ...baseSuggestions,
         elementSuggestions: filteredSuggestions,
-        designScore: Math.min(100, baseSuggestions.designScore + scoreImprovement)
+        designScore: Math.min(100, Math.round(baseSuggestions.designScore + scoreImprovement))
       }
     }
     

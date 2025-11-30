@@ -30,16 +30,33 @@ An educational tool that guides novices in creating posters by providing smart s
 
 The novel aspects of this implementation are the **design score** and the **contextual suggestion system**:
 
-**Design Score**: A real-time quality metric calculated from three components:
-- 50% Completeness: All template elements (by ID) must be present
-- 25% Font Matching: Percentage of elements using template-suggested fonts
-- 25% Color Matching: Percentage of elements using template-suggested colors
+**Design Score**: A real-time quality metric calculated from multiple components:
+- 25% Required Sections: Need 1 title, 1 subtitle/heading, 1 body text, 1 element
+- 25% Template Completeness: All template elements (by ID) must be present
+- 20% Font Matching: Percentage of elements using template-suggested fonts
+- 15% Color Matching: Percentage of elements using template-suggested colors
+- 10% Color Contrast: WCAG AA compliance (4.5:1 for normal text, 3:1 for large text)
+- 5% Spacing: Minimum spacing between elements (20px minimum)
+
+**Ignore Functionality**: Users can ignore suggestions they don't want to address:
+- Ignoring suggestions improves the design score proportionally
+- If all suggestions are ignored, the score reaches 100%
+- Ignored suggestions are moved to a separate "Ignored" tab
+- Users can restore ignored suggestions at any time
 
 **Contextual Suggestions**: Grammarly-style suggestion cards that dynamically appear/disappear:
+- All suggestions are visible at all times, grouped by element
+- Suggestions for the selected element are highlighted
+- Clicking a suggestion card selects the corresponding element
 - Font cards only appear when the selected element's font doesn't match template suggestions
 - Color cards only appear when text or background colors don't match template suggestions
+- Contrast cards appear when text/background contrast doesn't meet WCAG AA standards
+- Color scheme cards appear when colors don't match the selected color scheme
+- Spacing cards appear when elements are too close together
 - Cards automatically disappear when any correct option is applied
 - Cards reappear if the user changes back to an incorrect option
+- Each suggestion includes a design principle badge (Contrast, Hierarchy, Consistency, etc.)
+- Each suggestion provides concrete next steps for improvement
 - This provides focused, actionable feedback without overwhelming the interface
 
 ## Getting Started

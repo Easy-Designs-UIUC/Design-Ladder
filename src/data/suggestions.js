@@ -14,9 +14,7 @@ const extractTemplateFonts = (template) => {
     }
   })
   
-  const extractedFonts = Array.from(fonts)
-  console.log('Extracted template fonts:', extractedFonts)
-  return extractedFonts
+  return Array.from(fonts)
 }
 
 // Convert hex to RGB
@@ -124,19 +122,20 @@ const extractTemplateColors = (template) => {
     })
   }
   
-  const extractedColors = Array.from(colors)
-  console.log('Extracted template colors:', extractedColors)
-  return extractedColors
+  return Array.from(colors)
 }
 
 // Check required sections: title, subtitle/heading, body text, element
 const checkRequiredSections = (canvasElements) => {
-  const hasTitle = canvasElements.some(el => el.type === 'text' && el.style === 'title')
-  const hasSubtitleOrHeading = canvasElements.some(el => 
-    el.type === 'text' && (el.style === 'subtitle' || el.style === 'heading')
+  // Defensive check for null/undefined
+  const elements = canvasElements || []
+  
+  const hasTitle = elements.some(el => el?.type === 'text' && el?.style === 'title')
+  const hasSubtitleOrHeading = elements.some(el => 
+    el?.type === 'text' && (el?.style === 'subtitle' || el?.style === 'heading')
   )
-  const hasBodyText = canvasElements.some(el => el.type === 'text' && el.style === 'body')
-  const hasElement = canvasElements.some(el => el.type === 'element')
+  const hasBodyText = elements.some(el => el?.type === 'text' && el?.style === 'body')
+  const hasElement = elements.some(el => el?.type === 'element')
   
   const requirements = [
     { name: 'title', met: hasTitle },
@@ -153,13 +152,16 @@ const checkRequiredSections = (canvasElements) => {
 
 // Check if all template elements are present in canvas
 const checkTemplateCompleteness = (template, canvasElements) => {
-  if (!template?.layout?.elements) return { score: 0, missing: [], total: 0 }
+  // No template = 100% (nothing to compare against)
+  if (!template?.layout?.elements || template.layout.elements.length === 0) {
+    return { score: 100, missing: [], total: 0, present: 0 }
+  }
   
   const templateElementIds = new Set(
     template.layout.elements.map(el => el.id)
   )
   const canvasElementIds = new Set(
-    canvasElements.map(el => el.id)
+    (canvasElements || []).map(el => el.id)
   )
   
   const missing = template.layout.elements
@@ -170,40 +172,45 @@ const checkTemplateCompleteness = (template, canvasElements) => {
   const present = total - missing.length
   
   // Score is 100% if all elements are present, otherwise percentage
-  const score = total > 0 ? Math.round((present / total) * 100) : 0
+  const score = total > 0 ? Math.round((present / total) * 100) : 100
   
   return { score, missing, total, present }
 }
 
 // Normalize font names for comparison
 const normalizeFont = (font) => {
-  if (!font) return ''
-  const firstFont = font.split(',')[0].trim()
-  return firstFont.replace(/['"]/g, '').toLowerCase().replace(/[\s-]/g, '')
+  if (!font || typeof font !== 'string') return ''
+  try {
+    const firstFont = font.split(',')[0].trim()
+    return firstFont.replace(/['"]/g, '').toLowerCase().replace(/[\s-]/g, '')
+  } catch {
+    return ''
+  }
 }
 
 // Check font matching with template - now checks against suggested fonts too
 const checkFontMatching = (template, canvasElements, suggestedFonts = []) => {
+  const elements = canvasElements || []
   const templateFonts = extractTemplateFonts(template)
   
   // Combine template fonts and suggested fonts
-  const allSuggestedFonts = [...new Set([...templateFonts, ...suggestedFonts])]
-  if (allSuggestedFonts.length === 0) return { score: 100, matched: 0, total: 0 }
+  const allSuggestedFonts = [...new Set([...templateFonts, ...(suggestedFonts || [])])]
+  
+  // If no suggested fonts defined, return 100% (nothing to compare)
+  if (allSuggestedFonts.length === 0) return { score: 100, matched: 0, total: 0, unmatched: 0 }
   
   // Normalize all suggested fonts
-  const normalizedSuggestedFonts = new Set(allSuggestedFonts.map(normalizeFont))
+  const normalizedSuggestedFonts = new Set(allSuggestedFonts.map(normalizeFont).filter(f => f))
   
   // Get fonts actually used in canvas elements
-  const textElements = canvasElements.filter(el => el.type === 'text' && el.font)
-  const usedFonts = textElements.map(el => normalizeFont(el.font))
+  const textElements = elements.filter(el => el?.type === 'text' && el?.font)
+  const usedFonts = textElements.map(el => normalizeFont(el.font)).filter(f => f)
   
-  if (usedFonts.length === 0) return { score: 100, matched: 0, total: 0 }
+  // If no fonts used, return 100% (nothing to check)
+  if (usedFonts.length === 0) return { score: 100, matched: 0, total: 0, unmatched: 0 }
   
-  // Count how many match suggested fonts (if in suggestions, give 100%)
-  const matched = usedFonts.filter(font => {
-    return normalizedSuggestedFonts.has(font)
-  }).length
-  
+  // Count how many match suggested fonts
+  const matched = usedFonts.filter(font => normalizedSuggestedFonts.has(font)).length
   const total = usedFonts.length
   
   // Score: percentage of fonts that match suggested fonts
@@ -221,10 +228,51 @@ const getRelativeLuminance = (rgb) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
+// Normalize hex color (handle named colors, shorthand, etc.)
+const normalizeHexColor = (color) => {
+  if (!color || typeof color !== 'string') return null
+  
+  const trimmed = color.trim().toLowerCase()
+  
+  // Handle common named colors
+  const namedColors = {
+    'black': '#000000',
+    'white': '#ffffff',
+    'red': '#ff0000',
+    'green': '#00ff00',
+    'blue': '#0000ff',
+    'yellow': '#ffff00',
+    'purple': '#800080',
+    'orange': '#ffa500',
+    'transparent': null
+  }
+  
+  if (namedColors[trimmed] !== undefined) return namedColors[trimmed]
+  
+  // Add # if missing
+  let hex = trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+  
+  // Expand shorthand hex (e.g., #abc -> #aabbcc)
+  if (hex.length === 4) {
+    hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+  }
+  
+  // Validate hex format
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return null
+  
+  return hex
+}
+
 // Calculate contrast ratio between two colors
 const getContrastRatio = (color1Hex, color2Hex) => {
-  const rgb1 = hexToRgb(color1Hex)
-  const rgb2 = hexToRgb(color2Hex)
+  const normalized1 = normalizeHexColor(color1Hex)
+  const normalized2 = normalizeHexColor(color2Hex)
+  
+  if (!normalized1 || !normalized2) return 1
+  
+  const rgb1 = hexToRgb(normalized1)
+  const rgb2 = hexToRgb(normalized2)
+  
   if (!rgb1 || !rgb2) return 1
   
   const lum1 = getRelativeLuminance(rgb1)
@@ -237,10 +285,11 @@ const getContrastRatio = (color1Hex, color2Hex) => {
 
 // Check color contrast for text elements
 const checkColorContrast = (canvasElements, canvasBackground) => {
+  const elements = canvasElements || []
   const contrastIssues = []
   
-  canvasElements.forEach(el => {
-    if (el.type === 'text' && el.color) {
+  elements.forEach(el => {
+    if (el?.type === 'text' && el?.color) {
       // Get background color (element background or canvas background)
       const bgColor = el.backgroundColor && el.backgroundColor !== 'transparent' 
         ? el.backgroundColor 
@@ -248,7 +297,8 @@ const checkColorContrast = (canvasElements, canvasBackground) => {
       
       const contrastRatio = getContrastRatio(el.color, bgColor)
       const fontSize = el.fontSize || 16
-      const isLargeText = fontSize >= 18 || (fontSize >= 14 && el.fontWeight >= 700)
+      const fontWeight = el.fontWeight || 400
+      const isLargeText = fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700)
       
       // WCAG AA: 4.5:1 for normal text, 3:1 for large text
       const minRatio = isLargeText ? 3 : 4.5
@@ -266,7 +316,7 @@ const checkColorContrast = (canvasElements, canvasBackground) => {
     }
   })
   
-  const totalTextElements = canvasElements.filter(el => el.type === 'text' && el.color).length
+  const totalTextElements = elements.filter(el => el?.type === 'text' && el?.color).length
   const score = totalTextElements > 0 
     ? Math.round(((totalTextElements - contrastIssues.length) / totalTextElements) * 100)
     : 100
@@ -274,23 +324,47 @@ const checkColorContrast = (canvasElements, canvasBackground) => {
   return { score, issues: contrastIssues, total: totalTextElements }
 }
 
+// Estimate element height based on type and properties
+const estimateElementHeight = (element) => {
+  if (!element) return 24
+  
+  if (element.type === 'text') {
+    const fontSize = element.fontSize || 16
+    const lineHeight = 1.5
+    const content = element.content || ''
+    const lines = content.split('\n').length
+    return Math.max(fontSize * lineHeight * lines, fontSize)
+  }
+  
+  // For non-text elements, use a default size
+  return element.height || 40
+}
+
 // Check spacing between elements
 const checkSpacing = (canvasElements) => {
+  const elements = canvasElements || []
   const spacingIssues = []
   const minSpacing = 20 // Minimum recommended spacing in pixels
   
+  // Filter out elements without valid positions
+  const validElements = elements.filter(el => 
+    el && typeof el.y === 'number' && typeof el.x === 'number'
+  )
+  
   // Sort elements by y position
-  const sortedElements = [...canvasElements].sort((a, b) => a.y - b.y)
+  const sortedElements = [...validElements].sort((a, b) => a.y - b.y)
   
   for (let i = 0; i < sortedElements.length - 1; i++) {
     const current = sortedElements[i]
     const next = sortedElements[i + 1]
     
-    // Check vertical spacing
-    const currentBottom = current.y + (current.fontSize || 24)
+    // Check vertical spacing using estimated height
+    const currentHeight = estimateElementHeight(current)
+    const currentBottom = current.y + currentHeight
     const spacing = next.y - currentBottom
     
-    if (spacing < minSpacing && spacing >= 0) {
+    // Only flag if elements are vertically close but not overlapping
+    if (spacing >= 0 && spacing < minSpacing) {
       spacingIssues.push({
         elementId1: current.id,
         elementId2: next.id,
@@ -380,14 +454,11 @@ const checkColorMatching = (template, canvasElements, suggestedColors = []) => {
     }
   })
   
-  console.log('Used colors in canvas:', usedColorDetails)
-  
-
   const matched = usedColorDetails.filter(detail => detail.matches).length
   const total = usedColorDetails.length
   
-
-  const score = total > 0 ? Math.round((matched / total) * 100) : 0
+  // If no colors to check, return 100% (nothing to compare)
+  const score = total > 0 ? Math.round((matched / total) * 100) : 100
   
   return { score, matched, total, unmatched: total - matched }
 }
@@ -586,12 +657,6 @@ export const getSuggestions = (template, canvasElements = [], canvasBackground =
   const templateFonts = extractTemplateFonts(template)
   const templateColors = extractTemplateColors(template)
   
-  console.log('Template info:', {
-    name: template.name,
-    templateFonts,
-    templateColors
-  })
-  
   // Check required sections
   const requiredSections = checkRequiredSections(canvasElements)
   
@@ -602,8 +667,6 @@ export const getSuggestions = (template, canvasElements = [], canvasBackground =
   const allSuggestedFonts = templateFonts.length > 0 
     ? templateFonts 
     : ['Arial'] // Fallback if template has no fonts
-  
-  console.log('All suggested fonts (template only):', allSuggestedFonts)
   
   // Use ONLY template colors (no common colors)
   const colors = templateColors.length > 0
@@ -653,18 +716,6 @@ export const getSuggestions = (template, canvasElements = [], canvasBackground =
     spacingCheck
   )
   
-  console.log('Generated element suggestions:', elementSuggestions.length, elementSuggestions)
-
-  console.log('Final scoring:', {
-    requiredSections: requiredSections.score,
-    completeness: completeness.score,
-    fontMatching: fontMatching.score,
-    colorMatching: colorMatching.score,
-    contrast: contrastCheck.score,
-    spacing: spacingCheck.score,
-    overallScore
-  })
-  
   return {
     fonts: fonts,
     colors: colors,
@@ -679,20 +730,23 @@ export const getSuggestions = (template, canvasElements = [], canvasBackground =
 
 // Get fonts currently used in canvas
 const getUsedFonts = (canvasElements) => {
+  if (!Array.isArray(canvasElements)) return []
   return canvasElements
-    .filter(el => el.type === 'text' && el.font)
+    .filter(el => el?.type === 'text' && el?.font)
     .map(el => normalizeFont(el.font))
+    .filter(font => font)
 }
 
 // Get colors currently used in canvas (normalized to lowercase hex)
 const getUsedColors = (canvasElements) => {
+  if (!Array.isArray(canvasElements)) return []
   const colors = new Set()
   canvasElements.forEach(el => {
-    if (el.color) {
+    if (el?.color && typeof el.color === 'string') {
       const normalized = el.color.toLowerCase().trim()
-      if (normalized) colors.add(normalized)
+      if (normalized && normalized !== 'transparent') colors.add(normalized)
     }
-    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+    if (el?.backgroundColor && typeof el.backgroundColor === 'string' && el.backgroundColor !== 'transparent') {
       const normalized = el.backgroundColor.toLowerCase().trim()
       if (normalized) colors.add(normalized)
     }
@@ -704,12 +758,18 @@ const getUsedColors = (canvasElements) => {
 const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors, canvasBackground, selectedColors, contrastCheck, spacingCheck) => {
   const suggestions = []
   
+  // Defensive checks for inputs
   if (!template?.layout?.elements) return suggestions
+  const elements = Array.isArray(canvasElements) ? canvasElements : []
+  const fonts = Array.isArray(suggestedFonts) ? suggestedFonts : []
+  const colors = Array.isArray(suggestedColors) ? suggestedColors : []
+  const schemeColors = Array.isArray(selectedColors) ? selectedColors : []
+  const bgColor = canvasBackground || '#ffffff'
   
   // Check for missing elements
-  const templateElementIds = new Set(template.layout.elements.map(el => el.id))
-  const canvasElementIds = new Set(canvasElements.map(el => el.id))
-  const missingElements = template.layout.elements.filter(el => !canvasElementIds.has(el.id))
+  const templateElementIds = new Set(template.layout.elements.map(el => el?.id).filter(Boolean))
+  const canvasElementIds = new Set(elements.map(el => el?.id).filter(Boolean))
+  const missingElements = template.layout.elements.filter(el => el?.id && !canvasElementIds.has(el.id))
   
   missingElements.forEach(element => {
     suggestions.push({
@@ -725,31 +785,23 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
   })
   
   // Check each canvas element for improvements
-  canvasElements.forEach(element => {
+  elements.forEach(element => {
+    if (!element || !element.id) return
+    
     if (element.type === 'text') {
       const normalizedFont = normalizeFont(element.font)
-      const normalizedSuggestedFonts = suggestedFonts.map(normalizeFont)
+      const normalizedSuggestedFonts = fonts.map(normalizeFont).filter(f => f)
       
       // Font suggestion card - ONLY if current font is NOT in suggested fonts
       const isUsingCorrectFont = normalizedSuggestedFonts.includes(normalizedFont)
       
-      console.log('Checking font for element:', element.id, {
-        currentFont: element.font,
-        normalizedFont,
-        suggestedFonts: suggestedFonts.slice(0, 10),
-        normalizedSuggestedFonts: normalizedSuggestedFonts.slice(0, 10),
-        isUsingCorrectFont,
-        willShowSuggestion: !isUsingCorrectFont
-      })
-      
-      if (!isUsingCorrectFont && suggestedFonts.length > 0) {
-        console.log('✅ Adding font suggestion card for element:', element.id)
+      if (!isUsingCorrectFont && fonts.length > 0) {
         // Single card with all font options
         suggestions.push({
           type: 'font-group',
           elementId: element.id,
-          currentValue: element.font,
-          options: suggestedFonts.slice(0, 5), // Show top 5 fonts as options
+          currentValue: element.font || 'Unknown',
+          options: fonts.slice(0, 5), // Show top 5 fonts as options
           message: `Font doesn't match template`,
           nextStep: `Select one of the template fonts below to maintain visual consistency`,
           designPrinciple: 'Hierarchy',
@@ -759,36 +811,29 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
       }
       
       // Text color card - check if using a suggested color
-      const currentTextColor = element.color?.toLowerCase().trim()
+      const currentTextColor = element.color?.toLowerCase()?.trim() || ''
       const currentTextColorName = getColorNameFromHex(element.color)
-      const normalizedCurrentTextColor = currentTextColorName?.toLowerCase().replace(/[-\s]/g, '')
+      const normalizedCurrentTextColor = currentTextColorName?.toLowerCase()?.replace(/[-\s]/g, '') || ''
       
       // Check both by name (normalized) and by hex value
-      const isUsingCorrectTextColor = suggestedColors.some(color => {
+      const isUsingCorrectTextColor = colors.some(color => {
+        if (!color) return false
         const normalizedSuggestedColor = color.toLowerCase().replace(/[-\s]/g, '')
-        const suggestedHex = getColorHex(color).toLowerCase().trim()
+        const suggestedHex = getColorHex(color)?.toLowerCase()?.trim() || ''
         // Match by normalized name OR by exact hex
         return normalizedSuggestedColor === normalizedCurrentTextColor || 
                suggestedHex === currentTextColor
       })
       
-      console.log('Checking text color for element:', element.id, {
-        currentHex: element.color,
-        currentColorName: currentTextColorName,
-        normalizedCurrent: normalizedCurrentTextColor,
-        suggestedColors,
-        isUsingCorrect: isUsingCorrectTextColor
-      })
-      
-      if (!isUsingCorrectTextColor && suggestedColors.length > 0 && currentTextColorName && currentTextColorName !== 'Black') {
+      if (!isUsingCorrectTextColor && colors.length > 0 && currentTextColorName && currentTextColorName !== 'Black') {
         // Single card with all color options
         suggestions.push({
           type: 'text-color-group',
           elementId: element.id,
-          currentValue: element.color,
-          options: suggestedColors.map(color => ({
+          currentValue: element.color || '#000000',
+          options: colors.map(color => ({
             name: color,
-            hex: getColorHex(color)
+            hex: getColorHex(color) || '#000000'
           })),
           message: `Text color doesn't match template`,
           nextStep: `Choose a color from the template palette to maintain design consistency`,
@@ -801,36 +846,29 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
     
     // Background color card - check if using a suggested color
     if (element.backgroundColor && element.backgroundColor !== 'transparent') {
-      const currentBgColor = element.backgroundColor?.toLowerCase().trim()
+      const currentBgColor = element.backgroundColor?.toLowerCase()?.trim() || ''
       const currentBgColorName = getColorNameFromHex(element.backgroundColor)
-      const normalizedCurrentBgColor = currentBgColorName?.toLowerCase().replace(/[-\s]/g, '')
+      const normalizedCurrentBgColor = currentBgColorName?.toLowerCase()?.replace(/[-\s]/g, '') || ''
       
       // Check both by name (normalized) and by hex value
-      const isUsingCorrectBgColor = suggestedColors.some(color => {
+      const isUsingCorrectBgColor = colors.some(color => {
+        if (!color) return false
         const normalizedSuggestedColor = color.toLowerCase().replace(/[-\s]/g, '')
-        const suggestedHex = getColorHex(color).toLowerCase().trim()
+        const suggestedHex = getColorHex(color)?.toLowerCase()?.trim() || ''
         // Match by normalized name OR by exact hex
         return normalizedSuggestedColor === normalizedCurrentBgColor || 
                suggestedHex === currentBgColor
       })
       
-      console.log('Checking background color for element:', element.id, {
-        currentHex: element.backgroundColor,
-        currentColorName: currentBgColorName,
-        normalizedCurrent: normalizedCurrentBgColor,
-        suggestedColors,
-        isUsingCorrect: isUsingCorrectBgColor
-      })
-      
-      if (!isUsingCorrectBgColor && suggestedColors.length > 0 && currentBgColorName && currentBgColorName !== 'White') {
+      if (!isUsingCorrectBgColor && colors.length > 0 && currentBgColorName && currentBgColorName !== 'White') {
         // Single card with all background color options
         suggestions.push({
           type: 'background-color-group',
           elementId: element.id,
-          currentValue: element.backgroundColor,
-          options: suggestedColors.map(color => ({
+          currentValue: element.backgroundColor || '#ffffff',
+          options: colors.map(color => ({
             name: color,
-            hex: getColorHex(color)
+            hex: getColorHex(color) || '#000000'
           })),
           message: `Background color doesn't match template`,
           nextStep: `Select a template color to align with the design palette`,
@@ -843,48 +881,49 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
     
     // Contrast suggestion for text elements (check all text elements, not just those with backgrounds)
     if (element.type === 'text' && element.color) {
-      const bgColor = element.backgroundColor && element.backgroundColor !== 'transparent' 
+      const elementBg = element.backgroundColor && element.backgroundColor !== 'transparent' 
         ? element.backgroundColor 
-        : (canvasBackground || '#ffffff')
+        : bgColor
       
-      const contrastRatio = getContrastRatio(element.color, bgColor)
+      const contrastRatio = getContrastRatio(element.color, elementBg)
       const fontSize = element.fontSize || 16
-      const isLargeText = fontSize >= 18 || (fontSize >= 14 && element.fontWeight >= 700)
+      const fontWeight = element.fontWeight || 400
+      const isLargeText = fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700)
       const minRatio = isLargeText ? 3 : 4.5
       
       if (contrastRatio < minRatio) {
-        const normalizeColor = (color) => color?.toLowerCase().replace(/[-\s]/g, '') || ''
+        const normalizeColorName = (color) => color?.toLowerCase()?.replace(/[-\s]/g, '') || ''
         const betterColors = []
         
         // Priority 1: Try selected color scheme colors first (if they meet contrast)
-        if (selectedColors && selectedColors.length > 0) {
-          const schemeColors = selectedColors.map(color => ({
+        if (schemeColors.length > 0) {
+          const schemeColorOptions = schemeColors.map(color => ({
             name: color,
-            hex: getColorHex(color)
+            hex: getColorHex(color) || '#000000'
           })).filter(c => {
-            const testRatio = getContrastRatio(c.hex, bgColor)
+            const testRatio = getContrastRatio(c.hex, elementBg)
             return testRatio >= minRatio
           })
-          betterColors.push(...schemeColors)
+          betterColors.push(...schemeColorOptions)
         }
         
         // Priority 2: Try template colors (if they meet contrast and aren't already in betterColors)
-        if (suggestedColors.length > 0) {
-          const templateColors = suggestedColors.map(color => ({
+        if (colors.length > 0) {
+          const templateColorOptions = colors.map(color => ({
             name: color,
-            hex: getColorHex(color)
+            hex: getColorHex(color) || '#000000'
           })).filter(c => {
-            const testRatio = getContrastRatio(c.hex, bgColor)
+            const testRatio = getContrastRatio(c.hex, elementBg)
             const alreadyAdded = betterColors.some(bc => bc.hex === c.hex)
             return testRatio >= minRatio && !alreadyAdded
           })
-          betterColors.push(...templateColors)
+          betterColors.push(...templateColorOptions)
         }
         
         // Priority 3: Only suggest black/white as last resort if nothing else works
         if (betterColors.length === 0) {
-          const blackRatio = getContrastRatio('#000000', bgColor)
-          const whiteRatio = getContrastRatio('#ffffff', bgColor)
+          const blackRatio = getContrastRatio('#000000', elementBg)
+          const whiteRatio = getContrastRatio('#ffffff', elementBg)
           if (blackRatio >= minRatio) {
             betterColors.push({ name: 'Black', hex: '#000000' })
           }
@@ -896,34 +935,30 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
         if (betterColors.length > 0) {
           // Check if current color matches selected scheme
           const currentColorName = getColorNameFromHex(element.color)
-          const normalizedCurrentColor = normalizeColor(currentColorName)
-          const normalizedSelectedColors = selectedColors && selectedColors.length > 0
-            ? new Set(selectedColors.map(normalizeColor))
+          const normalizedCurrentColor = normalizeColorName(currentColorName)
+          const normalizedSchemeColorSet = schemeColors.length > 0
+            ? new Set(schemeColors.map(normalizeColorName))
             : new Set()
-          const matchesScheme = normalizedSelectedColors.has(normalizedCurrentColor)
           
           // Check if any of the suggested colors are from the selected scheme
-          const schemeColorNames = selectedColors && selectedColors.length > 0
-            ? new Set(selectedColors.map(normalizeColor))
-            : new Set()
           const suggestedSchemeColors = betterColors.filter(c => {
             const cName = getColorNameFromHex(c.hex)
-            return cName && schemeColorNames.has(normalizeColor(cName))
+            return cName && normalizedSchemeColorSet.has(normalizeColorName(cName))
           })
           const hasSchemeOptions = suggestedSchemeColors.length > 0
           
           suggestions.push({
             type: 'contrast-group',
             elementId: element.id,
-            currentValue: element.color,
-            backgroundColor: bgColor,
+            currentValue: element.color || '#000000',
+            backgroundColor: elementBg,
             contrastRatio: Math.round(contrastRatio * 10) / 10,
             minRequired: minRatio,
             options: betterColors.slice(0, 5),
             message: `Text contrast is too low (${Math.round(contrastRatio * 10) / 10}:1, need ${minRatio}:1)`,
             nextStep: hasSchemeOptions
               ? `Choose a color from your selected scheme that meets accessibility standards (shown first)`
-              : `Choose a color that meets contrast requirements${selectedColors && selectedColors.length > 0 ? ' - consider colors from your selected scheme if available' : ''}`,
+              : `Choose a color that meets contrast requirements${schemeColors.length > 0 ? ' - consider colors from your selected scheme if available' : ''}`,
             designPrinciple: 'Contrast',
             action: 'update',
             priority: 'high'
@@ -933,9 +968,9 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
     }
     
     // Color scheme suggestion (only show if contrast is already good)
-    if (selectedColors && selectedColors.length > 0) {
-      const normalizeColor = (color) => color?.toLowerCase().replace(/[-\s]/g, '') || ''
-      const normalizedSelectedColors = new Set(selectedColors.map(normalizeColor))
+    if (schemeColors.length > 0) {
+      const normalizeColorNameLocal = (color) => color?.toLowerCase()?.replace(/[-\s]/g, '') || ''
+      const normalizedSchemeColors = new Set(schemeColors.map(normalizeColorNameLocal))
       
       // Check text color - only show if:
       // 1. No contrast suggestion exists (contrast is good)
@@ -947,31 +982,32 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
       // Also check if contrast is actually good
       let contrastIsGood = true
       if (element.type === 'text' && element.color) {
-        const bgColor = element.backgroundColor && element.backgroundColor !== 'transparent' 
+        const elementBgForScheme = element.backgroundColor && element.backgroundColor !== 'transparent' 
           ? element.backgroundColor 
-          : (canvasBackground || '#ffffff')
-        const contrastRatio = getContrastRatio(element.color, bgColor)
+          : bgColor
+        const schemeContrastRatio = getContrastRatio(element.color, elementBgForScheme)
         const fontSize = element.fontSize || 16
-        const isLargeText = fontSize >= 18 || (fontSize >= 14 && element.fontWeight >= 700)
+        const fontWeight = element.fontWeight || 400
+        const isLargeText = fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700)
         const minRatio = isLargeText ? 3 : 4.5
-        contrastIsGood = contrastRatio >= minRatio
+        contrastIsGood = schemeContrastRatio >= minRatio
       }
       
       // Only show color scheme suggestion if contrast is good AND no contrast suggestion exists
       if (element.color && !hasContrastSuggestion && contrastIsGood) {
         const colorName = getColorNameFromHex(element.color)
         if (colorName && colorName !== 'Black' && colorName !== 'White') {
-          const normalizedColorName = normalizeColor(colorName)
-          if (!normalizedSelectedColors.has(normalizedColorName)) {
-            const matchingColors = selectedColors.map(color => ({
+          const normalizedColorName = normalizeColorNameLocal(colorName)
+          if (!normalizedSchemeColors.has(normalizedColorName)) {
+            const matchingColors = schemeColors.map(color => ({
               name: color,
-              hex: getColorHex(color)
+              hex: getColorHex(color) || '#000000'
             }))
             
             suggestions.push({
               type: 'color-scheme-group',
               elementId: element.id,
-              currentValue: element.color,
+              currentValue: element.color || '#000000',
               currentColorName: colorName,
               options: matchingColors,
               message: `Color doesn't match your selected color scheme`,
@@ -986,20 +1022,20 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
       
       // Check background color
       if (element.backgroundColor && element.backgroundColor !== 'transparent') {
-        const colorName = getColorNameFromHex(element.backgroundColor)
-        if (colorName && colorName !== 'White') {
-          const normalizedColorName = normalizeColor(colorName)
-          if (!normalizedSelectedColors.has(normalizedColorName)) {
-            const matchingColors = selectedColors.map(color => ({
+        const bgColorName = getColorNameFromHex(element.backgroundColor)
+        if (bgColorName && bgColorName !== 'White') {
+          const normalizedBgColorName = normalizeColorNameLocal(bgColorName)
+          if (!normalizedSchemeColors.has(normalizedBgColorName)) {
+            const matchingColors = schemeColors.map(color => ({
               name: color,
-              hex: getColorHex(color)
+              hex: getColorHex(color) || '#000000'
             }))
             
             suggestions.push({
               type: 'color-scheme-bg-group',
               elementId: element.id,
-              currentValue: element.backgroundColor,
-              currentColorName: colorName,
+              currentValue: element.backgroundColor || '#ffffff',
+              currentColorName: bgColorName,
               options: matchingColors,
               message: `Background color doesn't match your selected color scheme`,
               nextStep: `Select a background color from your chosen scheme for better cohesion`,
@@ -1013,16 +1049,15 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
     }
     
     // Spacing suggestions - only show for the first element in each pair to avoid duplicates
-    if (spacingCheck && spacingCheck.issues.length > 0) {
+    if (spacingCheck?.issues?.length > 0) {
       const elementSpacingIssue = spacingCheck.issues.find(issue => 
         issue.elementId1 === element.id || issue.elementId2 === element.id
       )
       
       if (elementSpacingIssue) {
         // Only show suggestion for elementId1 to avoid showing duplicate suggestions for both elements
-        // This way each spacing issue only appears once
         if (elementSpacingIssue.elementId1 === element.id) {
-          const otherElement = canvasElements.find(el => el.id === elementSpacingIssue.elementId2)
+          const otherElement = elements.find(el => el?.id === elementSpacingIssue.elementId2)
           const otherElementLabel = otherElement 
             ? (otherElement.type === 'text' 
                 ? (otherElement.content?.substring(0, 30) || 'element')

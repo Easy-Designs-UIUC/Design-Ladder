@@ -4,23 +4,39 @@ import './SuggestionsSidebar.css'
 
 // Normalize font for comparison
 const normalizeFont = (font) => {
-  if (!font) return ''
-  const firstFont = font.split(',')[0].trim()
-  return firstFont.replace(/['"]/g, '').toLowerCase().replace(/[\s-]/g, '')
+  if (!font || typeof font !== 'string') return ''
+  try {
+    const firstFont = font.split(',')[0].trim()
+    return firstFont.replace(/['"]/g, '').toLowerCase().replace(/[\s-]/g, '')
+  } catch {
+    return ''
+  }
 }
 
 // Generate unique key for a suggestion
 const getSuggestionKey = (suggestion, index) => {
-  return `${suggestion.elementId}-${suggestion.type}-${index}`
+  if (!suggestion) return `unknown-${index}`
+  const elementId = suggestion.elementId || 'unknown'
+  const type = suggestion.type || 'unknown'
+  return `${elementId}-${type}-${index}`
 }
 
-function SuggestionsSidebar({ suggestions, onApplySuggestion, selectedElement, canvasElements, onSelectElement, ignoredSuggestions, onIgnoreSuggestion, onUnignoreSuggestion }) {
+function SuggestionsSidebar({ 
+  suggestions = {}, 
+  onApplySuggestion, 
+  selectedElement, 
+  canvasElements = [], 
+  onSelectElement, 
+  ignoredSuggestions = new Set(), 
+  onIgnoreSuggestion, 
+  onUnignoreSuggestion 
+}) {
   const [activeTab, setActiveTab] = useState('active')
   
   // Get all suggestions (not filtered by selected element)
   const allSuggestions = useMemo(() => {
-    return suggestions.elementSuggestions || []
-  }, [suggestions.elementSuggestions])
+    return suggestions?.elementSuggestions || []
+  }, [suggestions?.elementSuggestions])
   
   // Filter suggestions based on ignored state
   const activeSuggestions = useMemo(() => {
@@ -59,13 +75,17 @@ function SuggestionsSidebar({ suggestions, onApplySuggestion, selectedElement, c
   
   // Get element info for display
   const getElementInfo = (elementId) => {
-    const element = canvasElements.find(el => el.id === elementId)
-    if (!element) return null
+    if (!elementId) return null
+    const element = (canvasElements || []).find(el => el?.id === elementId)
+    if (!element) {
+      // Element might be missing from canvas (e.g., a missing template element)
+      return { type: 'unknown', label: String(elementId), style: 'missing' }
+    }
     
     if (element.type === 'text') {
       const content = element.content || 'Text element'
       const truncated = content.length > 30 ? content.substring(0, 30) + '...' : content
-      return { type: element.type, label: truncated, style: element.style }
+      return { type: element.type, label: truncated, style: element.style || 'body' }
     } else {
       return { type: element.type, label: element.elementType || 'Element' }
     }
@@ -81,10 +101,10 @@ function SuggestionsSidebar({ suggestions, onApplySuggestion, selectedElement, c
           <h3 className="score-title">Design Score</h3>
           <div className="score-bar-container">
             <div 
-              className="score-bar"
-              style={{ width: `${suggestions.designScore}%` }}
+              className={`score-bar ${(suggestions?.designScore || 0) >= 80 ? 'score-good' : (suggestions?.designScore || 0) >= 50 ? 'score-ok' : 'score-low'}`}
+              style={{ width: `${Math.max(0, Math.min(100, suggestions?.designScore || 0))}%` }}
             >
-              {suggestions.designScore}%
+              {Math.round(suggestions?.designScore || 0)}%
             </div>
           </div>
         </div>

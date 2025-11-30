@@ -103,7 +103,7 @@ const Canvas = React.forwardRef(function Canvas(
             {element.type === 'text' ? (
               element.content
             ) : (
-              <span className="element-icon">{element.icon}</span>
+              <span className="element-icon">{element.icon || element.elementType?.charAt(0).toUpperCase() || 'E'}</span>
             )}
             {selectedElement === element.id && (
               <button

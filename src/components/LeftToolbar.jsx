@@ -63,15 +63,24 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   }, [suggestions, template])
   
   const elements = [
-    { id: 'flower', name: 'Flower', icon: '🌸' },
-    { id: 'graph', name: 'Graph', icon: '📊', elementType: 'chart' },
-    { id: 'photo', name: 'Photo', icon: '📷', elementType: 'photo' },
-    { id: 'lightbulb', name: 'Lightbulb', icon: '💡', elementType: 'lightbulb' },
-    { id: 'heart', name: 'Heart', icon: '❤️' },
-    { id: 'star', name: 'Star', icon: '⭐' },
-    { id: 'arrow', name: 'Arrow', icon: '➡️' },
-    { id: 'circle', name: 'Circle', icon: '⭕' }
+    { id: 'flower', name: 'Flower', icon: '', elementType: 'flower' },
+    { id: 'graph', name: 'Graph', icon: '', elementType: 'chart' },
+    { id: 'photo', name: 'Photo', icon: '', elementType: 'photo' },
+    { id: 'lightbulb', name: 'Lightbulb', icon: '', elementType: 'lightbulb' },
+    { id: 'heart', name: 'Heart', icon: '', elementType: 'heart' },
+    { id: 'star', name: 'Star', icon: '', elementType: 'star' },
+    { id: 'arrow', name: 'Arrow', icon: '', elementType: 'arrow' },
+    { id: 'circle', name: 'Circle', icon: '', elementType: 'circle' }
   ]
+
+  const handleElementClick = (element) => {
+    onAddElement({
+      type: 'element',
+      elementType: element.elementType || element.id, // Use elementType if available, otherwise use id
+      icon: element.icon,
+      name: element.name
+    })
+  }
 
 
   const toggleMenu = (menu) => {
@@ -112,15 +121,6 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
       console.log('Changing element background to:', colorHex)
       onUpdateElement(selectedElement, { backgroundColor: colorHex })
     }
-  }
-
-  const handleElementClick = (element) => {
-    onAddElement({
-      type: 'element',
-      elementType: element.elementType || element.id, // Use elementType if available, otherwise use id
-      icon: element.icon,
-      name: element.name
-    })
   }
 
   const handleBackgroundClick = (bg) => {
@@ -313,7 +313,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
                     onClick={() => handleElementClick(element)}
                     title={element.name}
                   >
-                    {element.icon}
+                    {element.name.charAt(0)}
                   </button>
                 ))}
               </div>

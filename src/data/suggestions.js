@@ -129,6 +129,28 @@ const extractTemplateColors = (template) => {
   return extractedColors
 }
 
+// Check required sections: title, subtitle/heading, body text, element
+const checkRequiredSections = (canvasElements) => {
+  const hasTitle = canvasElements.some(el => el.type === 'text' && el.style === 'title')
+  const hasSubtitleOrHeading = canvasElements.some(el => 
+    el.type === 'text' && (el.style === 'subtitle' || el.style === 'heading')
+  )
+  const hasBodyText = canvasElements.some(el => el.type === 'text' && el.style === 'body')
+  const hasElement = canvasElements.some(el => el.type === 'element')
+  
+  const requirements = [
+    { name: 'title', met: hasTitle },
+    { name: 'subtitle/heading', met: hasSubtitleOrHeading },
+    { name: 'body text', met: hasBodyText },
+    { name: 'element', met: hasElement }
+  ]
+  
+  const metCount = requirements.filter(r => r.met).length
+  const score = Math.round((metCount / 4) * 100)
+  
+  return { score, requirements, metCount, total: 4 }
+}
+
 // Check if all template elements are present in canvas
 const checkTemplateCompleteness = (template, canvasElements) => {
   if (!template?.layout?.elements) return { score: 0, missing: [], total: 0 }
@@ -188,6 +210,102 @@ const checkFontMatching = (template, canvasElements, suggestedFonts = []) => {
   const score = total > 0 ? Math.round((matched / total) * 100) : 100
   
   return { score, matched, total, unmatched: total - matched }
+}
+
+// Calculate relative luminance for WCAG contrast
+const getRelativeLuminance = (rgb) => {
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(val => {
+    val = val / 255
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// Calculate contrast ratio between two colors
+const getContrastRatio = (color1Hex, color2Hex) => {
+  const rgb1 = hexToRgb(color1Hex)
+  const rgb2 = hexToRgb(color2Hex)
+  if (!rgb1 || !rgb2) return 1
+  
+  const lum1 = getRelativeLuminance(rgb1)
+  const lum2 = getRelativeLuminance(rgb2)
+  const lighter = Math.max(lum1, lum2)
+  const darker = Math.min(lum1, lum2)
+  
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+// Check color contrast for text elements
+const checkColorContrast = (canvasElements, canvasBackground) => {
+  const contrastIssues = []
+  
+  canvasElements.forEach(el => {
+    if (el.type === 'text' && el.color) {
+      // Get background color (element background or canvas background)
+      const bgColor = el.backgroundColor && el.backgroundColor !== 'transparent' 
+        ? el.backgroundColor 
+        : (canvasBackground || '#ffffff')
+      
+      const contrastRatio = getContrastRatio(el.color, bgColor)
+      const fontSize = el.fontSize || 16
+      const isLargeText = fontSize >= 18 || (fontSize >= 14 && el.fontWeight >= 700)
+      
+      // WCAG AA: 4.5:1 for normal text, 3:1 for large text
+      const minRatio = isLargeText ? 3 : 4.5
+      
+      if (contrastRatio < minRatio) {
+        contrastIssues.push({
+          elementId: el.id,
+          contrastRatio: Math.round(contrastRatio * 10) / 10,
+          minRequired: minRatio,
+          textColor: el.color,
+          backgroundColor: bgColor,
+          isLargeText
+        })
+      }
+    }
+  })
+  
+  const totalTextElements = canvasElements.filter(el => el.type === 'text' && el.color).length
+  const score = totalTextElements > 0 
+    ? Math.round(((totalTextElements - contrastIssues.length) / totalTextElements) * 100)
+    : 100
+  
+  return { score, issues: contrastIssues, total: totalTextElements }
+}
+
+// Check spacing between elements
+const checkSpacing = (canvasElements) => {
+  const spacingIssues = []
+  const minSpacing = 20 // Minimum recommended spacing in pixels
+  
+  // Sort elements by y position
+  const sortedElements = [...canvasElements].sort((a, b) => a.y - b.y)
+  
+  for (let i = 0; i < sortedElements.length - 1; i++) {
+    const current = sortedElements[i]
+    const next = sortedElements[i + 1]
+    
+    // Check vertical spacing
+    const currentBottom = current.y + (current.fontSize || 24)
+    const spacing = next.y - currentBottom
+    
+    if (spacing < minSpacing && spacing >= 0) {
+      spacingIssues.push({
+        elementId1: current.id,
+        elementId2: next.id,
+        spacing: Math.round(spacing),
+        minRequired: minSpacing
+      })
+    }
+  }
+  
+  const totalComparisons = Math.max(0, sortedElements.length - 1)
+  const score = totalComparisons > 0
+    ? Math.round(((totalComparisons - spacingIssues.length) / totalComparisons) * 100)
+    : 100
+  
+  return { score, issues: spacingIssues, total: totalComparisons }
 }
 
 // Check color matching with template and suggested colors
@@ -264,26 +382,77 @@ const checkColorMatching = (template, canvasElements, suggestedColors = []) => {
   
   console.log('Used colors in canvas:', usedColorDetails)
   
-  if (usedColors.length === 0) return { score: 100, matched: 0, total: 0 }
-  
-  // Count how many used colors match suggested colors
-  // Check both normalized names and hex values from the details
+
   const matched = usedColorDetails.filter(detail => detail.matches).length
   const total = usedColorDetails.length
   
-  // Score: percentage of colors that match template
-  const score = total > 0 ? Math.round((matched / total) * 100) : 100
+
+  const score = total > 0 ? Math.round((matched / total) * 100) : 0
   
   return { score, matched, total, unmatched: total - matched }
 }
 
+// Check if colors match selected color scheme
+const checkColorSchemeMatch = (canvasElements, selectedColors = []) => {
+  if (!selectedColors || selectedColors.length === 0) {
+    return { score: 100, matched: 0, total: 0, issues: [] }
+  }
+  
+  const normalizeColor = (color) => color?.toLowerCase().replace(/[-\s]/g, '') || ''
+  const normalizedSelectedColors = new Set(selectedColors.map(normalizeColor))
+  
+  const colorDetails = []
+  const issues = []
+  
+  canvasElements.forEach(el => {
+    if (el.color) {
+      const colorName = getColorNameFromHex(el.color)
+      if (colorName && colorName !== 'Black' && colorName !== 'White') {
+        const normalizedColorName = normalizeColor(colorName)
+        const matches = normalizedSelectedColors.has(normalizedColorName)
+        colorDetails.push({ element: el.id, color: colorName, matches })
+        if (!matches) {
+          issues.push({ elementId: el.id, color: colorName, type: 'text' })
+        }
+      }
+    }
+    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+      const colorName = getColorNameFromHex(el.backgroundColor)
+      if (colorName && colorName !== 'White') {
+        const normalizedColorName = normalizeColor(colorName)
+        const matches = normalizedSelectedColors.has(normalizedColorName)
+        colorDetails.push({ element: el.id, color: colorName, matches })
+        if (!matches) {
+          issues.push({ elementId: el.id, color: colorName, type: 'background' })
+        }
+      }
+    }
+  })
+  
+  const total = colorDetails.length
+  const matched = colorDetails.filter(d => d.matches).length
+  const score = total > 0 ? Math.round((matched / total) * 100) : 100
+  
+  return { score, matched, total, issues }
+}
+
 // Generate template-specific tips
-const generateTemplateTips = (template, completeness, fontMatching, colorMatching) => {
+const generateTemplateTips = (template, completeness, fontMatching, colorMatching, requiredSections, contrastCheck, spacingCheck, colorSchemeMatch) => {
   const tips = []
   
   if (!template) return tips
   
-  // Completeness tips (most important)
+  // Required sections tips
+  if (requiredSections && requiredSections.metCount < requiredSections.total) {
+    const missing = requiredSections.requirements.filter(r => !r.met)
+    if (missing.length > 0) {
+      tips.push(`Add required sections: ${missing.map(r => r.name).join(', ')}`)
+    }
+  } else if (requiredSections && requiredSections.metCount === requiredSections.total) {
+      tips.push(`All required sections are present`)
+  }
+  
+  // Completeness tips
   if (completeness.missing.length > 0) {
     const missingCount = completeness.missing.length
     const totalCount = completeness.total
@@ -294,13 +463,13 @@ const generateTemplateTips = (template, completeness, fontMatching, colorMatchin
       tips.push(`Add ${missingCount} missing elements to complete the template`)
     }
   } else if (completeness.total > 0) {
-    tips.push(`✓ All ${completeness.total} template elements are present!`)
+    tips.push(`All ${completeness.total} template elements are present!`)
   }
   
   // Font matching tips
   if (fontMatching && fontMatching.total > 0) {
     if (fontMatching.score === 100) {
-      tips.push(`✓ All fonts match the template style`)
+      tips.push(`All fonts match the template style`)
     } else if (fontMatching.unmatched > 0) {
       tips.push(`Consider using template fonts: ${fontMatching.matched}/${fontMatching.total} fonts match`)
     }
@@ -309,14 +478,36 @@ const generateTemplateTips = (template, completeness, fontMatching, colorMatchin
   // Color matching tips
   if (colorMatching && colorMatching.total > 0) {
     if (colorMatching.score === 100) {
-      tips.push(`✓ Colors match the template palette`)
+      tips.push(`Colors match the template palette`)
     } else if (colorMatching.unmatched > 0) {
       tips.push(`Consider using template colors: ${colorMatching.matched}/${colorMatching.total} colors match`)
     }
+  } else if (colorMatching && colorMatching.total === 0) {
+    // If no colors are used, don't give 100% - encourage adding colors
+    tips.push(`Add colors to improve your design score`)
+  }
+  
+  // Contrast tips
+  if (contrastCheck && contrastCheck.issues.length > 0) {
+    tips.push(`${contrastCheck.issues.length} text element${contrastCheck.issues.length > 1 ? 's' : ''} need${contrastCheck.issues.length === 1 ? 's' : ''} better contrast`)
+  } else if (contrastCheck && contrastCheck.total > 0) {
+    tips.push(`All text meets accessibility contrast standards`)
+  }
+  
+  // Spacing tips
+  if (spacingCheck && spacingCheck.issues.length > 0) {
+    tips.push(`Improve spacing: ${spacingCheck.issues.length} area${spacingCheck.issues.length > 1 ? 's' : ''} need${spacingCheck.issues.length === 1 ? 's' : ''} more space`)
+  }
+  
+  // Color scheme tips
+  if (colorSchemeMatch && colorSchemeMatch.issues.length > 0) {
+    tips.push(`${colorSchemeMatch.issues.length} color${colorSchemeMatch.issues.length > 1 ? 's' : ''} don't match your selected color scheme`)
+  } else if (colorSchemeMatch && colorSchemeMatch.total > 0) {
+    tips.push(`Colors match your selected color scheme`)
   }
   
   // Perfect match message
-  if (completeness.score === 100 && fontMatching?.score === 100 && colorMatching?.score === 100) {
+  if (requiredSections?.score === 100 && completeness.score === 100 && fontMatching?.score === 100 && colorMatching?.score === 100 && contrastCheck?.score === 100) {
     tips.push('Perfect! Your design matches the template perfectly')
   }
   
@@ -362,18 +553,24 @@ const generateTemplateTips = (template, completeness, fontMatching, colorMatchin
  * Generate suggestions and calculate design score based on template requirements
  * 
  * SCORING LOGIC:
- * - 50% Completeness: All template elements (by ID) must be present
- * - 25% Font Matching: ALL suggested fonts (template + common) count as 100%
- * - 25% Color Matching: ALL suggested colors (template palette + common) count as 100%
+ * - 25% Required Sections: Need 1 title, 1 subtitle/heading, 1 body text, 1 element
+ * - 25% Template Completeness: All template elements (by ID) must be present
+ * - 20% Font Matching: ALL suggested fonts (template) count as 100%
+ * - 15% Color Matching: ALL suggested colors (template palette) count as 100%
+ * - 10% Color Contrast: WCAG AA compliance (4.5:1 for normal, 3:1 for large)
+ * - 5% Spacing: Minimum spacing between elements
  * 
  * SUGGESTION CARDS (Grammarly-style):
  * - Font card: Only appears if current font is NOT in suggested fonts
  * - Text color card: Only appears if current text color is NOT in suggested colors
  * - Background color card: Only appears if current background is NOT in suggested colors
+ * - Contrast card: Appears if text/background contrast doesn't meet WCAG AA
+ * - Color scheme card: Appears if color doesn't match selected color scheme
+ * - Spacing card: Appears if elements are too close together
  * - Cards disappear automatically when any correct option is applied
  * - Cards reappear if user changes back to incorrect option
  */
-export const getSuggestions = (template, canvasElements = []) => {
+export const getSuggestions = (template, canvasElements = [], canvasBackground = null, selectedColors = []) => {
   // If no template, return default suggestions
   if (!template) {
     return {
@@ -394,6 +591,9 @@ export const getSuggestions = (template, canvasElements = []) => {
     templateFonts,
     templateColors
   })
+  
+  // Check required sections
+  const requiredSections = checkRequiredSections(canvasElements)
   
   // Check completeness
   const completeness = checkTemplateCompleteness(template, canvasElements)
@@ -416,28 +616,52 @@ export const getSuggestions = (template, canvasElements = []) => {
   // Check color matching with ALL suggested colors
   const colorMatching = checkColorMatching(template, canvasElements, colors)
   
-  // Calculate overall score: 50% completeness, 25% font matching, 25% color matching
+  // Check color contrast
+  const contrastCheck = checkColorContrast(canvasElements, canvasBackground)
+  
+  // Check spacing
+  const spacingCheck = checkSpacing(canvasElements)
+  
+  // Check color scheme match
+  const colorSchemeMatch = checkColorSchemeMatch(canvasElements, selectedColors)
+  
+  // Calculate overall score with new weighting
   const overallScore = Math.round(
-    (completeness.score * 0.5) + 
-    (fontMatching.score * 0.25) + 
-    (colorMatching.score * 0.25)
+    (requiredSections.score * 0.25) + 
+    (completeness.score * 0.25) + 
+    (fontMatching.score * 0.20) + 
+    (colorMatching.score * 0.15) +
+    (contrastCheck.score * 0.10) +
+    (spacingCheck.score * 0.05)
   )
   
   // Generate tips
-  const tips = generateTemplateTips(template, completeness, fontMatching, colorMatching)
+  const tips = generateTemplateTips(template, completeness, fontMatching, colorMatching, requiredSections, contrastCheck, spacingCheck, colorSchemeMatch)
   
   // For display, use all template fonts
   const fonts = allSuggestedFonts
   
   // Generate element-specific suggestions (use all fonts, not just displayed ones)
-  const elementSuggestions = generateElementSuggestions(template, canvasElements, allSuggestedFonts, colors)
+  const elementSuggestions = generateElementSuggestions(
+    template, 
+    canvasElements, 
+    allSuggestedFonts, 
+    colors, 
+    canvasBackground,
+    selectedColors,
+    contrastCheck,
+    spacingCheck
+  )
   
   console.log('Generated element suggestions:', elementSuggestions.length, elementSuggestions)
 
   console.log('Final scoring:', {
+    requiredSections: requiredSections.score,
     completeness: completeness.score,
     fontMatching: fontMatching.score,
     colorMatching: colorMatching.score,
+    contrast: contrastCheck.score,
+    spacing: spacingCheck.score,
     overallScore
   })
   
@@ -477,7 +701,7 @@ const getUsedColors = (canvasElements) => {
 }
 
 // Generate element-specific suggestions (Grammarly-style)
-const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors) => {
+const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors, canvasBackground, selectedColors, contrastCheck, spacingCheck) => {
   const suggestions = []
   
   if (!template?.layout?.elements) return suggestions
@@ -492,7 +716,9 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
       type: 'missing-element',
       elementId: element.id,
       elementType: element.type,
-      message: `Add ${element.type === 'text' ? 'text element' : 'icon'}: ${element.id}`,
+      message: `Missing ${element.type === 'text' ? 'text element' : 'icon'}: ${element.id}`,
+      nextStep: `Add this element from the toolbar to complete the template structure`,
+      designPrinciple: 'Completeness',
       action: 'add',
       priority: 'high'
     })
@@ -525,6 +751,8 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
           currentValue: element.font,
           options: suggestedFonts.slice(0, 5), // Show top 5 fonts as options
           message: `Font doesn't match template`,
+          nextStep: `Select one of the template fonts below to maintain visual consistency`,
+          designPrinciple: 'Hierarchy',
           action: 'update',
           priority: 'high'
         })
@@ -563,6 +791,8 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
             hex: getColorHex(color)
           })),
           message: `Text color doesn't match template`,
+          nextStep: `Choose a color from the template palette to maintain design consistency`,
+          designPrinciple: 'Consistency',
           action: 'update',
           priority: 'medium'
         })
@@ -603,9 +833,216 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
             hex: getColorHex(color)
           })),
           message: `Background color doesn't match template`,
+          nextStep: `Select a template color to align with the design palette`,
+          designPrinciple: 'Consistency',
           action: 'update',
           priority: 'medium'
         })
+      }
+    }
+    
+    // Contrast suggestion for text elements (check all text elements, not just those with backgrounds)
+    if (element.type === 'text' && element.color) {
+      const bgColor = element.backgroundColor && element.backgroundColor !== 'transparent' 
+        ? element.backgroundColor 
+        : (canvasBackground || '#ffffff')
+      
+      const contrastRatio = getContrastRatio(element.color, bgColor)
+      const fontSize = element.fontSize || 16
+      const isLargeText = fontSize >= 18 || (fontSize >= 14 && element.fontWeight >= 700)
+      const minRatio = isLargeText ? 3 : 4.5
+      
+      if (contrastRatio < minRatio) {
+        const normalizeColor = (color) => color?.toLowerCase().replace(/[-\s]/g, '') || ''
+        const betterColors = []
+        
+        // Priority 1: Try selected color scheme colors first (if they meet contrast)
+        if (selectedColors && selectedColors.length > 0) {
+          const schemeColors = selectedColors.map(color => ({
+            name: color,
+            hex: getColorHex(color)
+          })).filter(c => {
+            const testRatio = getContrastRatio(c.hex, bgColor)
+            return testRatio >= minRatio
+          })
+          betterColors.push(...schemeColors)
+        }
+        
+        // Priority 2: Try template colors (if they meet contrast and aren't already in betterColors)
+        if (suggestedColors.length > 0) {
+          const templateColors = suggestedColors.map(color => ({
+            name: color,
+            hex: getColorHex(color)
+          })).filter(c => {
+            const testRatio = getContrastRatio(c.hex, bgColor)
+            const alreadyAdded = betterColors.some(bc => bc.hex === c.hex)
+            return testRatio >= minRatio && !alreadyAdded
+          })
+          betterColors.push(...templateColors)
+        }
+        
+        // Priority 3: Only suggest black/white as last resort if nothing else works
+        if (betterColors.length === 0) {
+          const blackRatio = getContrastRatio('#000000', bgColor)
+          const whiteRatio = getContrastRatio('#ffffff', bgColor)
+          if (blackRatio >= minRatio) {
+            betterColors.push({ name: 'Black', hex: '#000000' })
+          }
+          if (whiteRatio >= minRatio) {
+            betterColors.push({ name: 'White', hex: '#ffffff' })
+          }
+        }
+        
+        if (betterColors.length > 0) {
+          // Check if current color matches selected scheme
+          const currentColorName = getColorNameFromHex(element.color)
+          const normalizedCurrentColor = normalizeColor(currentColorName)
+          const normalizedSelectedColors = selectedColors && selectedColors.length > 0
+            ? new Set(selectedColors.map(normalizeColor))
+            : new Set()
+          const matchesScheme = normalizedSelectedColors.has(normalizedCurrentColor)
+          
+          // Check if any of the suggested colors are from the selected scheme
+          const schemeColorNames = selectedColors && selectedColors.length > 0
+            ? new Set(selectedColors.map(normalizeColor))
+            : new Set()
+          const suggestedSchemeColors = betterColors.filter(c => {
+            const cName = getColorNameFromHex(c.hex)
+            return cName && schemeColorNames.has(normalizeColor(cName))
+          })
+          const hasSchemeOptions = suggestedSchemeColors.length > 0
+          
+          suggestions.push({
+            type: 'contrast-group',
+            elementId: element.id,
+            currentValue: element.color,
+            backgroundColor: bgColor,
+            contrastRatio: Math.round(contrastRatio * 10) / 10,
+            minRequired: minRatio,
+            options: betterColors.slice(0, 5),
+            message: `Text contrast is too low (${Math.round(contrastRatio * 10) / 10}:1, need ${minRatio}:1)`,
+            nextStep: hasSchemeOptions
+              ? `Choose a color from your selected scheme that meets accessibility standards (shown first)`
+              : `Choose a color that meets contrast requirements${selectedColors && selectedColors.length > 0 ? ' - consider colors from your selected scheme if available' : ''}`,
+            designPrinciple: 'Contrast',
+            action: 'update',
+            priority: 'high'
+          })
+        }
+      }
+    }
+    
+    // Color scheme suggestion (only show if contrast is already good)
+    if (selectedColors && selectedColors.length > 0) {
+      const normalizeColor = (color) => color?.toLowerCase().replace(/[-\s]/g, '') || ''
+      const normalizedSelectedColors = new Set(selectedColors.map(normalizeColor))
+      
+      // Check text color - only show if:
+      // 1. No contrast suggestion exists (contrast is good)
+      // 2. Contrast actually meets requirements
+      const hasContrastSuggestion = suggestions.some(s => 
+        s.elementId === element.id && s.type === 'contrast-group'
+      )
+      
+      // Also check if contrast is actually good
+      let contrastIsGood = true
+      if (element.type === 'text' && element.color) {
+        const bgColor = element.backgroundColor && element.backgroundColor !== 'transparent' 
+          ? element.backgroundColor 
+          : (canvasBackground || '#ffffff')
+        const contrastRatio = getContrastRatio(element.color, bgColor)
+        const fontSize = element.fontSize || 16
+        const isLargeText = fontSize >= 18 || (fontSize >= 14 && element.fontWeight >= 700)
+        const minRatio = isLargeText ? 3 : 4.5
+        contrastIsGood = contrastRatio >= minRatio
+      }
+      
+      // Only show color scheme suggestion if contrast is good AND no contrast suggestion exists
+      if (element.color && !hasContrastSuggestion && contrastIsGood) {
+        const colorName = getColorNameFromHex(element.color)
+        if (colorName && colorName !== 'Black' && colorName !== 'White') {
+          const normalizedColorName = normalizeColor(colorName)
+          if (!normalizedSelectedColors.has(normalizedColorName)) {
+            const matchingColors = selectedColors.map(color => ({
+              name: color,
+              hex: getColorHex(color)
+            }))
+            
+            suggestions.push({
+              type: 'color-scheme-group',
+              elementId: element.id,
+              currentValue: element.color,
+              currentColorName: colorName,
+              options: matchingColors,
+              message: `Color doesn't match your selected color scheme`,
+              nextStep: `Pick a color from your selected scheme to maintain visual harmony`,
+              designPrinciple: 'Color Harmony',
+              action: 'update',
+              priority: 'medium'
+            })
+          }
+        }
+      }
+      
+      // Check background color
+      if (element.backgroundColor && element.backgroundColor !== 'transparent') {
+        const colorName = getColorNameFromHex(element.backgroundColor)
+        if (colorName && colorName !== 'White') {
+          const normalizedColorName = normalizeColor(colorName)
+          if (!normalizedSelectedColors.has(normalizedColorName)) {
+            const matchingColors = selectedColors.map(color => ({
+              name: color,
+              hex: getColorHex(color)
+            }))
+            
+            suggestions.push({
+              type: 'color-scheme-bg-group',
+              elementId: element.id,
+              currentValue: element.backgroundColor,
+              currentColorName: colorName,
+              options: matchingColors,
+              message: `Background color doesn't match your selected color scheme`,
+              nextStep: `Select a background color from your chosen scheme for better cohesion`,
+              designPrinciple: 'Color Harmony',
+              action: 'update',
+              priority: 'medium'
+            })
+          }
+        }
+      }
+    }
+    
+    // Spacing suggestions - only show for the first element in each pair to avoid duplicates
+    if (spacingCheck && spacingCheck.issues.length > 0) {
+      const elementSpacingIssue = spacingCheck.issues.find(issue => 
+        issue.elementId1 === element.id || issue.elementId2 === element.id
+      )
+      
+      if (elementSpacingIssue) {
+        // Only show suggestion for elementId1 to avoid showing duplicate suggestions for both elements
+        // This way each spacing issue only appears once
+        if (elementSpacingIssue.elementId1 === element.id) {
+          const otherElement = canvasElements.find(el => el.id === elementSpacingIssue.elementId2)
+          const otherElementLabel = otherElement 
+            ? (otherElement.type === 'text' 
+                ? (otherElement.content?.substring(0, 30) || 'element')
+                : (otherElement.elementType || 'element'))
+            : 'adjacent element'
+          
+          suggestions.push({
+            type: 'spacing-group',
+            elementId: element.id,
+            spacing: elementSpacingIssue.spacing,
+            minRequired: elementSpacingIssue.minRequired,
+            otherElementId: elementSpacingIssue.elementId2,
+            otherElementLabel: otherElementLabel,
+            message: `Increase spacing (currently ${elementSpacingIssue.spacing}px, need ${elementSpacingIssue.minRequired}px)`,
+            nextStep: `Drag this element further from "${otherElementLabel}" to improve readability and visual breathing room`,
+            designPrinciple: 'Spacing',
+            action: 'update',
+            priority: 'low'
+          })
+        }
       }
     }
   })

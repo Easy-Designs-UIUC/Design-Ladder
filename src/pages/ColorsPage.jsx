@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
+import { getColorHex } from '../utils/colorUtils'
 import './ColorsPage.css'
 
 function ColorsPage() {
@@ -49,6 +50,10 @@ function ColorsPage() {
                 checked={selectedColors.includes(color)}
                 onChange={() => handleColorToggle(color)}
                 disabled={!selectedColors.includes(color) && selectedColors.length >= 3}
+              />
+              <span
+                className="color-swatch"
+                style={{ backgroundColor: getColorHex(color) }}
               />
               <span className="color-name">{color}</span>
             </label>

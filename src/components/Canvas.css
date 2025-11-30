@@ -35,7 +35,20 @@
 .canvas-element.dragging { cursor: grabbing; opacity: 0.8; }
 .canvas-element:hover { border-color: var(--accent); }
 .canvas-element.selected { border-color: var(--accent); border-style: solid; box-shadow: 0 0 0 2px rgba(255,0,0,0.2); }
-.element-icon { font-size: 3rem; color: var(--text); }
+.element-icon { 
+  font-size: 2rem; 
+  color: var(--text); 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid var(--card-border);
+  border-radius: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
 .delete-element-btn {
   position: absolute;
   top: -12px;

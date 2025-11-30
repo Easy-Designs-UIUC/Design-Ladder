@@ -33,7 +33,23 @@
 
 .score-bar-container { width: 100%; height: 30px; background: rgba(255,255,255,0.03); border-radius: 15px; overflow: hidden; position: relative; }
 
-.score-bar { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: var(--text); font-weight: 700; font-size: 1rem; transition: width 0.3s ease; }
+.score-bar { 
+  height: 100%; 
+  border-radius: 15px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  color: var(--text); 
+  font-weight: 700; 
+  font-size: 1rem; 
+  transition: width 0.3s ease, background 0.3s ease;
+  min-width: 50px;
+}
+
+/* Score level colors */
+.score-bar.score-good { background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%); }
+.score-bar.score-ok { background: linear-gradient(90deg, #eab308 0%, #ca8a04 100%); }
+.score-bar.score-low { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); }
 
 .suggestions-section { margin-bottom: 1.5rem; }
 
@@ -357,5 +373,265 @@
 .tip-text {
   flex: 1;
   color: var(--text-dark);
+}
+
+/* Element grouping styles */
+.element-suggestions-group {
+  margin-bottom: 1.5rem;
+}
+
+.element-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.element-header:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--accent-cyan);
+}
+
+.element-header.selected {
+  background: rgba(0, 255, 255, 0.1);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.element-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.element-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.element-label {
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.element-style-badge {
+  padding: 0.2rem 0.5rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.element-suggestion-count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.element-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+/* Highlighted card styles */
+.grammarly-card.highlighted {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 255, 255, 0.05);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+}
+
+.grammarly-card {
+  cursor: pointer;
+}
+
+.grammarly-card:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 4px 6px rgba(0, 255, 255, 0.2);
+  transform: translateX(2px);
+}
+
+/* Card header with design principle */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.design-principle-badge {
+  padding: 0.25rem 0.5rem;
+  background: var(--accent);
+  color: var(--text);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.card-next-step {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 255, 255, 0.05);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.next-step-label {
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.spacing-info {
+  padding: 0.5rem;
+}
+
+.spacing-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.spacing-hint {
+  margin-top: 0.5rem !important;
+  font-style: italic;
+  color: var(--accent-cyan) !important;
+}
+
+.missing-element-info {
+  padding: 0.5rem;
+}
+
+.missing-element-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--accent-cyan);
+  font-style: italic;
+}
+
+/* Tabs */
+.suggestions-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--card-border);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+}
+
+.tab-button:hover {
+  color: var(--accent-cyan);
+  background: rgba(0, 255, 255, 0.05);
+}
+
+.tab-button.active {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+/* Card actions */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.ignore-btn,
+.unignore-btn {
+  padding: 0.25rem 0.75rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ignore-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: var(--accent-cyan);
+}
+
+.unignore-btn {
+  background: rgba(0, 255, 255, 0.1);
+  border-color: var(--accent-cyan);
+}
+
+.unignore-btn:hover {
+  background: rgba(0, 255, 255, 0.2);
+}
+
+.grammarly-card.ignored {
+  opacity: 0.6;
+  background: rgba(255,255,255,0.01);
+}
+
+.element-type-indicator {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+.card-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
 }
 

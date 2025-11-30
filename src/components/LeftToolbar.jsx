@@ -3,7 +3,22 @@ import { useNavigate } from 'react-router-dom'
 import { getColorHex, COLOR_MAP } from '../utils/colorUtils'
 import './LeftToolbar.css'
 
-function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template, canvasElements = [] }) {
+function LeftToolbar({ 
+  onAddElement, 
+  onUpdateElement, 
+  selectedElement, 
+  selectedElementData,
+  projects, 
+  activeProjectId, 
+  onBackgroundChange, 
+  handleSave, 
+  handleDownload, 
+  onSelectProject, 
+  suggestions, 
+  template, 
+  canvasElements = [],
+  hasUnsavedChanges = false
+}) {
   const navigate = useNavigate()
   const [expandedMenu, setExpandedMenu] = useState(null)
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)
@@ -11,6 +26,26 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
 
   const textStyles = ['Title', 'Subtitle', 'Heading', 'Body']
+
+  // Use selectedElementData if available (from master), otherwise derive from canvasElements
+  const elementData = selectedElementData || (selectedElement ? canvasElements.find(el => el.id === selectedElement) : null)
+  const isTextSelected = elementData?.type === 'text'
+  const isElementSelected = elementData?.type === 'element'
+
+  const confirmNavigateAway = (navigateFn) => {
+    if (!hasUnsavedChanges) {
+      navigateFn()
+      return
+    }
+
+    const ok = window.confirm(
+      'You have unsaved changes. If you leave the editor now, your latest edits will be lost. Continue?'
+    )
+    if (ok) {
+      navigateFn()
+    }
+  }
+
   
   // Use template fonts + add common alternative fonts for user choice
   const fonts = useMemo(() => {
@@ -63,16 +98,24 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   }, [suggestions, template])
   
   const elements = [
-    { id: 'flower', name: 'Flower', icon: '🌸' },
+    { id: 'flower', name: 'Flower', icon: '🌸', elementType: 'flower' },
     { id: 'graph', name: 'Graph', icon: '📊', elementType: 'chart' },
     { id: 'photo', name: 'Photo', icon: '📷', elementType: 'photo' },
     { id: 'lightbulb', name: 'Lightbulb', icon: '💡', elementType: 'lightbulb' },
-    { id: 'heart', name: 'Heart', icon: '❤️' },
-    { id: 'star', name: 'Star', icon: '⭐' },
-    { id: 'arrow', name: 'Arrow', icon: '➡️' },
-    { id: 'circle', name: 'Circle', icon: '⭕' }
+    { id: 'heart', name: 'Heart', icon: '❤️', elementType: 'heart' },
+    { id: 'star', name: 'Star', icon: '⭐', elementType: 'star' },
+    { id: 'arrow', name: 'Arrow', icon: '➡️', elementType: 'arrow' },
+    { id: 'circle', name: 'Circle', icon: '⭕', elementType: 'circle' }
   ]
 
+  const handleElementClick = (element) => {
+    onAddElement({
+      type: 'element',
+      elementType: element.elementType || element.id,
+      icon: element.icon,
+      name: element.name
+    })
+  }
 
   const toggleMenu = (menu) => {
     setExpandedMenu(expandedMenu === menu ? null : menu)
@@ -86,41 +129,43 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
       'Heading': { style: 'heading', fontSize: 36 },
       'Body': { style: 'body', fontSize: 16 }
     }
-    onAddElement({
-      type: 'text',
-      content: style.toUpperCase(),
-      ...styleMap[style],
-      font: 'Arial'
-    })
+
+    const styleProps = styleMap[style]
+    if (!styleProps) return
+    
+    if (isTextSelected && selectedElement) {
+      onUpdateElement(selectedElement, {
+        style: styleProps.style,
+        fontSize: styleProps.fontSize
+      })
+    } else {
+      onAddElement({
+        type: 'text',
+        content: style.toUpperCase(),
+        ...styleMap[style],
+        font: 'Arial'
+      })
+    }
   }
 
   const handleFontClick = (font) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       onUpdateElement(selectedElement, { font })
     }
   }
 
   const handleTextColorClick = (colorHex) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       console.log('Changing text color to:', colorHex)
       onUpdateElement(selectedElement, { color: colorHex })
     }
   }
 
   const handleElementBackgroundClick = (colorHex) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       console.log('Changing element background to:', colorHex)
       onUpdateElement(selectedElement, { backgroundColor: colorHex })
     }
-  }
-
-  const handleElementClick = (element) => {
-    onAddElement({
-      type: 'element',
-      elementType: element.elementType || element.id, // Use elementType if available, otherwise use id
-      icon: element.icon,
-      name: element.name
-    })
   }
 
   const handleBackgroundClick = (bg) => {
@@ -132,8 +177,8 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
     handleDownload(format)
   }
 
-  // Check if selected element is text type
-  const isTextElement = selectedElement && canvasElements.find(el => el.id === selectedElement)?.type === 'text'
+  // Check if selected element is text type (for UI improvements)
+  const isTextElement = isTextSelected
   const hasSelectedElement = !!selectedElement
 
   return (
@@ -141,7 +186,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
       {/* Navigation Section - Separated */}
       <div className="toolbar-nav-section">
         <div className="toolbar-nav">
-          <button className="nav-btn" onClick={() => navigate('/')} title="Return to home page">
+          <button className="nav-btn" onClick={() => confirmNavigateAway(() => navigate('/'))} title="Return to home page">
             🏠 Home
           </button>
           <button 
@@ -155,6 +200,17 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
 
         {showProjects && (
           <div className="projects-list">
+            <button
+              className="projects-open-library-btn"
+              onClick={() => {
+                confirmNavigateAway(() => {
+                  setShowProjects(false)
+                  navigate('/projects')
+                })
+              }}
+            >
+              Open Projects Library
+            </button>
             <h3 className="projects-title">Saved Projects</h3>
             {projects.map((project) => (
               <button
@@ -193,94 +249,95 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
           {/* Add Elements Section */}
           <div className="control-section add-elements-section">
             <h3 className="section-title">➕ Add Elements</h3>
-          {/* Text Styles - Add Element */}
-          <div className="menu-section">
-            <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('text')}
-              title="Add text elements to your poster"
-            >
-              📝 Text {expandedMenu === 'text' ? '−' : '+'}
-            </button>
-            {expandedMenu === 'text' && (
-              <div className="menu-content">
-                <button
-                  className="submenu-toggle"
-                  onClick={() => setExpandedSubmenu(expandedSubmenu === 'styles' ? null : 'styles')}
-                  title="Choose a text style to add"
-                >
-                  Styles {expandedSubmenu === 'styles' ? '−' : '+'}
-                </button>
-                {expandedSubmenu === 'styles' && (
-                  <div className="submenu-content">
-                    {textStyles.map((style) => (
-                      <button
-                        key={style}
-                        className="submenu-item"
-                        onClick={() => handleTextStyleClick(style)}
-                        title={`Add ${style} text element`}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Elements - Add Element */}
-          <div className="menu-section">
-            <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('elements')}
-              title="Add icons and visual elements"
-            >
-              🎨 Elements {expandedMenu === 'elements' ? '−' : '+'}
-            </button>
-            {expandedMenu === 'elements' && (
-              <div className="menu-content elements-grid">
-                {elements.map((element) => (
+            {/* Text Styles - Add Element */}
+            <div className="menu-section">
+              <button
+                className={`menu-toggle ${isElementSelected ? 'disabled' : ''}`}
+                onClick={() => !isElementSelected && toggleMenu('text')}
+                disabled={isElementSelected}
+                title="Add text elements to your poster"
+              >
+                📝 Text {expandedMenu === 'text' ? '−' : '+'}
+              </button>
+              {expandedMenu === 'text' && (
+                <div className={`menu-content text-menu-content ${isElementSelected ? 'text-menu-disabled' : ''}`}>
                   <button
-                    key={element.id}
-                    className="element-item"
-                    onClick={() => handleElementClick(element)}
-                    title={`Add ${element.name} element`}
+                    className="submenu-toggle"
+                    onClick={() => setExpandedSubmenu(expandedSubmenu === 'styles' ? null : 'styles')}
+                    title="Choose a text style to add"
                   >
-                    {element.icon}
+                    Styles {expandedSubmenu === 'styles' ? '−' : '+'}
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
+                  {expandedSubmenu === 'styles' && (
+                    <div className="submenu-content">
+                      {textStyles.map((style) => (
+                        <button
+                          key={style}
+                          className="submenu-item"
+                          onClick={() => handleTextStyleClick(style)}
+                          title={`Add ${style} text element`}
+                        >
+                          {style}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* Background - Add Element */}
-          <div className="menu-section">
-            <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('background')}
-              title="Change the canvas background color"
-            >
-              🎨 Background {expandedMenu === 'background' ? '−' : '+'}
-            </button>
-            {expandedMenu === 'background' && (
-              <div className="menu-content backgrounds-grid">
-                {backgroundColors.length > 0 ? (
-                  backgroundColors.map((bg) => (
+            {/* Elements - Add Element */}
+            <div className="menu-section">
+              <button
+                className="menu-toggle"
+                onClick={() => toggleMenu('elements')}
+                title="Add icons and visual elements"
+              >
+                🎨 Elements {expandedMenu === 'elements' ? '−' : '+'}
+              </button>
+              {expandedMenu === 'elements' && (
+                <div className="menu-content elements-grid">
+                  {elements.map((element) => (
                     <button
-                      key={bg.id}
-                      className="background-item"
-                      onClick={() => handleBackgroundClick(bg)}
-                      style={{ backgroundColor: bg.color }}
-                      title={`Set background to ${bg.name}`}
-                    />
-                  ))
-                ) : (
-                  <div className="no-items">No background colors available</div>
-                )}
-              </div>
-            )}
-          </div>
+                      key={element.id}
+                      className="element-item"
+                      onClick={() => handleElementClick(element)}
+                      title={`Add ${element.name} element`}
+                    >
+                      {element.icon}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Background - Add Element */}
+            <div className="menu-section">
+              <button
+                className="menu-toggle"
+                onClick={() => toggleMenu('background')}
+                title="Change the canvas background color"
+              >
+                🎨 Background {expandedMenu === 'background' ? '−' : '+'}
+              </button>
+              {expandedMenu === 'background' && (
+                <div className="menu-content backgrounds-grid">
+                  {backgroundColors.length > 0 ? (
+                    backgroundColors.map((bg) => (
+                      <button
+                        key={bg.id}
+                        className="background-item"
+                        onClick={() => handleBackgroundClick(bg)}
+                        style={{ backgroundColor: bg.color }}
+                        title={`Set background to ${bg.name}`}
+                      />
+                    ))
+                  ) : (
+                    <div className="no-items">No background colors available</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -437,4 +494,3 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
 }
 
 export default LeftToolbar
-

@@ -43,14 +43,29 @@
   padding: 1rem;
   border-bottom: 1px solid var(--card-border);
   background: var(--card);
+  margin-bottom: 1rem;
 }
 
-.projects-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 0.8rem;
+.projects-open-library-btn {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
   color: var(--text);
+  text-align: center;
+  transition: all 0.2s ease;
 }
+
+.projects-open-library-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--accent-cyan);
+}
+
 
 .project-item {
   width: 100%;
@@ -78,11 +93,18 @@
 }
 
 .project-name {
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
   font-weight: 500;
   color: var(--text);
 }
 
 .project-date {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
   color: var(--text);
   font-size: 0.95rem;
   opacity: 0.7;
@@ -97,6 +119,7 @@
   margin-bottom: 1rem;
 }
 
+/* items like "Text", "Elements", and "Background" */
 .menu-toggle {
   width: 100%;
   padding: 0.8rem;
@@ -115,14 +138,99 @@
 
 .menu-toggle:hover {
   background: rgba(255,255,255,0.05);
+  border-color: var(--accent-cyan);
 }
 
-.menu-content {
+/* Elements and Background boxes (the ones that open w/ the grid) */
+/* Text box added as well */
+.menu-content,
+.text-menu-content {
   margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: var(--card);
-  border: 1px solid var(--card-border);
+  padding: 0.4rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(3px);
   border-radius: 6px;
+}
+
+/* disable styling */
+.submenu-item.disabled,
+.submenu-item:disabled,
+.color-button.disabled,
+.color-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.submenu-item.disabled:hover,
+.color-button.disabled:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.menu-toggle.disabled,
+.menu-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.text-menu-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+
+
+/* first box that opens when Text is toggled */
+.text-menu-content {
+  /* background: rgba(255, 255, 255, 0.04); */
+  /* border: 1px solid rgba(255, 255, 255, 0.08); */
+  /* border-radius: 8px; */
+  padding: 0.5rem;
+  /* backdrop-filter: blur(4px); */
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* space between subsections */
+}
+
+/* tiles like "Styles" "Font" etc */
+.text-menu-content .submenu-toggle {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.text-menu-content .submenu-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-cyan);
+}
+
+/* the submenu box that open under "Styles" "Font" etc */
+.text-menu-content .submenu-content {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.text-menu-content .submenu-content:last-of-type {
+  margin-bottom: 0;
+}
+
+/* the actual submenu items that open under "Styles" "Font" etc */
+.text-menu-content .submenu-item {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.text-menu-content .submenu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-cyan);
 }
 
 .submenu-toggle {
@@ -135,7 +243,7 @@
   font-weight: 600;
   font-size: 1rem;
   text-align: left;
-  margin-bottom: 0.5rem;
+  /* margin-bottom: 0.5rem; */
   display: flex;
   justify-content: space-between;
   color: var(--text);

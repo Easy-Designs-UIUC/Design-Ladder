@@ -100,6 +100,7 @@ function EditorPage() {
   const canvasRef = useRef(null)
   const lastLoadedProjectId = useRef(null)
   const lastLoadedTemplateId = useRef(null)
+  const lastLoadedProjectDate = useRef(null) // Track when we last loaded the project to detect saves
   const hasClearedQuizSelections = useRef(false)
   const projectNameInputRef = useRef(null)
   const selectedColorsRef = useRef([])
@@ -212,6 +213,65 @@ function EditorPage() {
       lastLoadedProjectId.current = null
     }
   }, [appState.selectedTemplate, appState.activeProjectId])
+
+  const elementsEqual = (a = [], b = []) => {
+    if (a.length !== b.length) return false
+
+    for (let i = 0; i < a.length; i++) {
+      const elA = a[i]
+      const elB = b[i]
+      if (!elB) return false
+
+      const keysA = Object.keys(elA)
+      const keysB = Object.keys(elB)
+      if (keysA.length !== keysB.length) return false
+
+      for (const key of keysA) {
+        if (elA[key] !== elB[key]) {
+          return false
+        }
+      }
+    }
+    return true
+  }
+
+  const hasUnsavedChanges = useMemo(() => {
+    const { activeProjectId, projects, selectedTemplate } = appState
+
+    // If we have an active project, compare against its saved snapshot
+    if (activeProjectId) {
+      const project = projects.find(p => p.id === activeProjectId)
+
+      if (!project) return false
+
+      const savedElements = project.elements
+        ? cloneElements(project.elements)
+        : cloneElements(DEFAULT_CANVAS_ELEMENTS)
+
+      const savedBackground = project.background || null
+
+      const sameElements = elementsEqual(canvasElements, savedElements)
+      const sameBackground = (canvasBackground || null) === savedBackground
+
+      return !(sameElements && sameBackground)
+    }
+
+    // No active project yet → compare to the initial template state
+    const { elements: templateEls, background: templateBg } =
+      buildTemplateState(selectedTemplate)
+
+    const sameElements = elementsEqual(canvasElements, templateEls)
+    const sameBackground = (canvasBackground || null) === (templateBg || null)
+
+    return !(sameElements && sameBackground)
+  }, [appState, canvasElements, canvasBackground])
+
+  // Find the full selected element object
+  const selectedElementData = useMemo(
+    () => canvasElements.find(el => el.id === selectedElement) || null,
+    [canvasElements, selectedElement]
+  )
+
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -330,17 +390,26 @@ function EditorPage() {
     if (!activeProjectId) {
       lastLoadedProjectId.current = null
       lastLoadedTemplateId.current = null // Reset template tracking when no project
-      return
-    }
-
-    // Don't reload if we just saved this project (prevent blank screen)
-    if (lastLoadedProjectId.current === activeProjectId) {
+      lastLoadedProjectDate.current = null
       return
     }
 
     const activeProject = projects.find((project) => project.id === activeProjectId)
     if (!activeProject) {
       lastLoadedProjectId.current = null
+      lastLoadedProjectDate.current = null
+      return
+    }
+
+    // Check if we need to reload:
+    // 1. Different project (switching projects)
+    // 2. Same project but date changed (project was saved/updated)
+    const projectChanged = lastLoadedProjectId.current !== activeProjectId
+    const projectUpdated = lastLoadedProjectId.current === activeProjectId && 
+                          lastLoadedProjectDate.current !== activeProject.date
+
+    // Don't reload if it's the same project and hasn't been updated
+    if (!projectChanged && !projectUpdated) {
       return
     }
 
@@ -348,8 +417,9 @@ function EditorPage() {
       ? cloneElements(activeProject.elements)
       : cloneElements(DEFAULT_CANVAS_ELEMENTS)
 
-    // Set lastLoadedProjectId FIRST to prevent template rebuild from clearing canvas
+    // Set tracking refs FIRST to prevent template rebuild from clearing canvas
     lastLoadedProjectId.current = activeProjectId
+    lastLoadedProjectDate.current = activeProject.date
 
     // Only restore template if it's different and we're actually loading (not just saving)
     if (activeProject.template && activeProject.template !== appState.selectedTemplate) {
@@ -372,80 +442,132 @@ function EditorPage() {
   }, [appState.activeProjectId, appState.projects, appState.selectedTemplate, setAppState])
 
   const handleProjectSelect = useCallback((projectId) => {
-    if (projectId === appState.activeProjectId) {
-      return
-    }
+    const project = appState.projects.find(p => p.id === projectId)
+    if (!project) return
 
+    // Update global state (which project is active, and its template if stored)
     setAppState(prev => ({
       ...prev,
-      activeProjectId: projectId
+      activeProjectId: projectId,
+      selectedTemplate: project.template || prev.selectedTemplate || null
     }))
-  }, [appState.activeProjectId, setAppState])
+
+    // Load this project's snapshot into the canvas
+    const elementsToLoad = project.elements
+      ? cloneElements(project.elements)
+      : cloneElements(DEFAULT_CANVAS_ELEMENTS)
+
+    setCanvasElements(elementsToLoad)
+    setHistory([cloneElements(elementsToLoad)])
+    setHistoryIndex(0)
+    setCanvasBackground(project.background || null)
+    setSelectedElement(null)
+  }, [appState.projects, setAppState])
+
+  const handleSave = useCallback(async () => {
+  // 1) Snapshot element state
+  const elementsSnapshot = cloneElements(canvasElements)
+  const backgroundSnapshot = canvasBackground
+
+  const today = new Date()
+  const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(
+    today.getDate()
+  ).padStart(2, '0')}/${today.getFullYear()}`
+
+  // 2) Build a thumbnail from the actual canvas (small, no selection box)
+  let thumbnailDataUrl = null
+
+  const prevSelected = selectedElement
+  setSelectedElement(null)
+
+  // let React update the DOM to remove the selection outline
+  await new Promise(resolve => requestAnimationFrame(resolve))
+
+  if (canvasRef.current) {
+    try {
+      const thumbCanvas = await html2canvas(canvasRef.current, {
+        backgroundColor: null,
+        scale: 0.3,          // smaller → faster + lighter
+        removeContainer: true
+      })
+      thumbnailDataUrl = thumbCanvas.toDataURL('image/png')
+    } catch (err) {
+      console.error('Failed to generate project thumbnail', err)
+    }
+  }
+
+  // restore selection in the editor
+  setSelectedElement(prevSelected)
+
+  // 3) Save project (including thumbnail)
+  setAppState(prev => {
+    const { activeProjectId, projects, selectedTemplate } = prev
+
+    const createNewProject = () => {
+      const newId = Date.now()
+      const enteredName = projectNameInput.trim()
+      const projectName = enteredName || `Project ${projects.length + 1}`
+
+      const newProject = {
+        id: newId,
+        name: projectName,
+        date: dateStr,
+        elements: elementsSnapshot,
+        background: backgroundSnapshot,
+        template: selectedTemplate || null,
+        thumbnail: thumbnailDataUrl || null
+      }
+
+      return {
+        ...prev,
+        activeProjectId: newId,
+        projects: [...projects, newProject]
+      }
+    }
+
+    // No active project yet → create one
+    if (!activeProjectId) {
+      return createNewProject()
+    }
+
+    // Update existing project
+    const updatedProjects = projects.map(project =>
+      project.id === activeProjectId
+        ? {
+            ...project,
+            date: dateStr,
+            elements: elementsSnapshot,
+            background: backgroundSnapshot,
+            template: selectedTemplate || project.template || null,
+            thumbnail: thumbnailDataUrl || project.thumbnail || null
+          }
+        : project
+    )
+
+    return {
+      ...prev,
+      projects: updatedProjects
+    }
+  })
+
+  setShowSaveConfirm(true)
+  setTimeout(() => setShowSaveConfirm(false), 2000)
+
+  setShowProjectNameModal(false)
+  setProjectNameInput('')
+}, [canvasElements, canvasBackground, projectNameInput, selectedElement, setAppState])
+
 
   const handleSaveClick = useCallback(() => {
-    const projectId = appState.activeProjectId
-
-    if (!projectId) {
-      // Show modal for new project
-      const defaultName = `Project ${appState.projects.length + 1}`
-      setProjectNameInput(defaultName)
+    // If no active project yet → first save → ask for a name
+    if (!appState.activeProjectId) {
+      setProjectNameInput('')           // or prefill a suggested name if you want
       setShowProjectNameModal(true)
     } else {
-      // Save existing project directly
-      handleSaveProject(projectId)
+      // Existing project → just save immediately
+      handleSave()
     }
-  }, [appState.activeProjectId, appState.projects.length])
-
-  const handleSaveProject = useCallback((projectId = null) => {
-    const today = new Date()
-    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`
-
-    if (!projectId) {
-      const defaultName = `Project ${appState.projects.length + 1}`
-      const projectName = projectNameInput.trim() || defaultName
-      const newProjectId = Date.now()
-
-      // Set lastLoadedProjectId BEFORE state update to prevent reload
-      lastLoadedProjectId.current = newProjectId
-
-      setAppState(prev => ({
-        ...prev,
-        activeProjectId: newProjectId,
-        projects: [
-          ...prev.projects,
-          {
-            id: newProjectId,
-            name: projectName,
-            date: dateStr,
-            elements: cloneElements(canvasElements),
-            background: canvasBackground,
-            template: appState.selectedTemplate // Preserve template reference
-          }
-        ]
-      }))
-      setShowProjectNameModal(false)
-      setProjectNameInput('')
-    } else {
-      // For existing projects, just update without changing activeProjectId
-      setAppState(prev => ({
-        ...prev,
-        projects: prev.projects.map(project =>
-          project.id === projectId
-            ? {
-                ...project,
-                date: dateStr,
-                elements: cloneElements(canvasElements),
-                background: canvasBackground,
-                template: appState.selectedTemplate // Preserve template reference
-              }
-            : project
-        )
-      }))
-    }
-
-    setShowSaveConfirm(true)
-    setTimeout(() => setShowSaveConfirm(false), 2000)
-  }, [appState.projects.length, appState.selectedTemplate, canvasBackground, canvasElements, projectNameInput, setAppState])
+  }, [appState.activeProjectId, handleSave])
 
   // Focus input when modal opens
   useEffect(() => {
@@ -456,9 +578,7 @@ function EditorPage() {
   }, [showProjectNameModal])
 
   const handleDownload = useCallback(async (format) => {
-    if (!canvasRef.current) {
-      return
-    }
+    if (!canvasRef.current) return
 
     const unsupportedFormats = ['TIFF', 'AI']
     if (unsupportedFormats.includes(format)) {
@@ -466,11 +586,19 @@ function EditorPage() {
       return
     }
 
+    // temporarily clears selection for poster content capture
+    const prevSelected = selectedElement
+    setSelectedElement(null)
+
+    // waits one frame
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+
     try {
       const canvasElement = canvasRef.current
       const captureCanvas = await html2canvas(canvasElement, {
         backgroundColor: null,
-        scale: window.devicePixelRatio || 1
+        scale: window.devicePixelRatio || 1,
+        removeContainer: true,
       })
 
       const timestamp = new Date().toISOString().replace(/[:.-]/g, '')
@@ -479,9 +607,10 @@ function EditorPage() {
       if (format === 'PDF') {
         const imgData = captureCanvas.toDataURL('image/png')
         const pdf = new jsPDF({
-          orientation: captureCanvas.width >= captureCanvas.height ? 'landscape' : 'portrait',
+          orientation:
+            captureCanvas.width >= captureCanvas.height ? 'landscape' : 'portrait',
           unit: 'px',
-          format: [captureCanvas.width, captureCanvas.height]
+          format: [captureCanvas.width, captureCanvas.height],
         })
 
         pdf.addImage(imgData, 'PNG', 0, 0, captureCanvas.width, captureCanvas.height)
@@ -498,8 +627,12 @@ function EditorPage() {
     } catch (error) {
       console.error('Failed to download poster', error)
       alert('Sorry, there was a problem preparing the download. Please try again.')
+    } finally {
+      // restores selection
+      setSelectedElement(prevSelected)
     }
-  }, [])
+  }, [selectedElement])
+
 
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(240)
   const [rightSidebarWidth, setRightSidebarWidth] = useState(280)
@@ -544,6 +677,7 @@ function EditorPage() {
           onAddElement={handleAddElement}
           onUpdateElement={handleUpdateElement}
           selectedElement={selectedElement}
+          selectedElementData={selectedElementData}
           projects={appState.projects}
           activeProjectId={appState.activeProjectId}
           onBackgroundChange={setCanvasBackground}
@@ -552,19 +686,21 @@ function EditorPage() {
           onSelectProject={handleProjectSelect}
           suggestions={suggestions}
           template={appState.selectedTemplate}
-          />
-          <div 
-            className="resize-handle resize-handle-right"
-            onMouseDown={() => setIsResizingLeft(true)}
-          />
-        </div>
-        
-        <div className="editor-center">
-          <div className="editor-toolbar">
-            <button
-              className="undo-redo-btn"
-              onClick={handleUndo}
-              disabled={historyIndex === 0}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
+
+        <div 
+          className="resize-handle resize-handle-right"
+          onMouseDown={() => setIsResizingLeft(true)}
+        />
+      </div>
+
+      <div className="editor-center">
+        <div className="editor-toolbar">
+          <button
+            className="undo-redo-btn"
+            onClick={handleUndo}
+            disabled={historyIndex === 0}
             >
               UNDO
             </button>
@@ -645,7 +781,7 @@ function EditorPage() {
               onChange={(e) => setProjectNameInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  handleSaveProject()
+                  handleSave()
                 } else if (e.key === 'Escape') {
                   setShowProjectNameModal(false)
                 }
@@ -661,7 +797,7 @@ function EditorPage() {
               </button>
               <button
                 className="project-name-save-btn"
-                onClick={() => handleSaveProject()}
+                onClick={() => handleSave()}
               >
                 SAVE
               </button>

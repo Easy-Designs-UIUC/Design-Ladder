@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getColorHex, COLOR_MAP } from '../utils/colorUtils'
 import './LeftToolbar.css'
 
-function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template }) {
+function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, selectedElementData, projects, activeProjectId, onBackgroundChange, handleSave, handleDownload, onSelectProject, suggestions, template, hasUnsavedChanges }) {
   const navigate = useNavigate()
   const [expandedMenu, setExpandedMenu] = useState(null)
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)
@@ -11,6 +11,25 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
 
   const textStyles = ['Title', 'Subtitle', 'Heading', 'Body']
+
+  const isTextSelected = selectedElementData?.type === 'text'
+  const isElementSelected = selectedElementData?.type === 'element'
+  // const isIconSelected = selectedElementData?.type === 'element'
+
+  const confirmNavigateAway = (navigateFn) => {
+    if (!hasUnsavedChanges) {
+      navigateFn()
+      return
+    }
+
+    const ok = window.confirm(
+      'You have unsaved changes. If you leave the editor now, your latest edits will be lost. Continue?'
+    )
+    if (ok) {
+      navigateFn()
+    }
+  }
+
   
   // Use template fonts + add common alternative fonts for user choice
   const fonts = useMemo(() => {
@@ -95,29 +114,40 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
       'Heading': { style: 'heading', fontSize: 36 },
       'Body': { style: 'body', fontSize: 16 }
     }
-    onAddElement({
-      type: 'text',
-      content: style.toUpperCase(),
-      ...styleMap[style],
-      font: 'Arial'
-    })
+
+    const styleProps = styleMap[style]
+    if (!styleProps) return
+    
+    if (isTextSelected && selectedElement) {
+      onUpdateElement(selectedElement, {
+        style: styleProps.style,
+        fontSize: styleProps.fontSize
+      })
+    } else {
+      onAddElement({
+        type: 'text',
+        content: style.toUpperCase(),
+        ...styleMap[style],
+        font: 'Arial'
+      })
+    }
   }
 
   const handleFontClick = (font) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       onUpdateElement(selectedElement, { font })
     }
   }
 
   const handleTextColorClick = (colorHex) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       console.log('Changing text color to:', colorHex)
       onUpdateElement(selectedElement, { color: colorHex })
     }
   }
 
   const handleElementBackgroundClick = (colorHex) => {
-    if (selectedElement) {
+    if (isTextSelected && selectedElement) {
       console.log('Changing element background to:', colorHex)
       onUpdateElement(selectedElement, { backgroundColor: colorHex })
     }
@@ -135,7 +165,7 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
   return (
     <div className="left-toolbar">
       <div className="toolbar-nav">
-        <button className="nav-btn" onClick={() => navigate('/')}>
+        <button className="nav-btn" onClick={() => confirmNavigateAway(() => navigate('/'))}>
           Home
         </button>
         <button 
@@ -146,9 +176,19 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
         </button>
       </div>
 
-      {showProjects && (
+      <div className="left-toolbar-scrollable">
+        {showProjects && (
         <div className="projects-list">
-          <h3 className="projects-title">Saved Projects</h3>
+          <button
+            className="projects-open-library-btn"
+            onClick={() => {
+              confirmNavigateAway(() => {
+                setShowProjects(false)
+                navigate('/projects')
+              })
+            }} >
+            Open Projects Library
+          </button>
           {projects.map((project) => (
             <button
               key={project.id}
@@ -164,18 +204,16 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
           ))}
         </div>
       )}
-
-      <div className="left-toolbar-scrollable">
         <div className="toolbar-menus">
           <div className="menu-section">
             <button
-              className="menu-toggle"
-              onClick={() => toggleMenu('text')}
-            >
+              className={`menu-toggle ${isElementSelected ? 'disabled' : ''}`}
+              onClick={() => !isElementSelected && toggleMenu('text')}
+              disabled={isElementSelected} >
               Text {expandedMenu === 'text' ? '−' : '+'}
             </button>
             {expandedMenu === 'text' && (
-              <div className="menu-content">
+              <div className={`menu-content text-menu-content ${isElementSelected ? 'text-menu-disabled' : ''}`}>
                 <button
                   className="submenu-toggle"
                   onClick={() => setExpandedSubmenu(expandedSubmenu === 'styles' ? null : 'styles')}
@@ -360,8 +398,6 @@ function LeftToolbar({ onAddElement, onUpdateElement, selectedElement, projects,
               <button onClick={() => handleDownloadOption('PDF')}>PDF</button>
               <button onClick={() => handleDownloadOption('PNG')}>PNG</button>
               <button onClick={() => handleDownloadOption('JPEG')}>JPEG</button>
-              <button onClick={() => handleDownloadOption('TIFF')}>TIFF</button>
-              <button onClick={() => handleDownloadOption('AI')}>AI</button>
             </div>
           )}
         </div>

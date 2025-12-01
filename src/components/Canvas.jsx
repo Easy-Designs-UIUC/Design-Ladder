@@ -64,16 +64,20 @@ const Canvas = React.forwardRef(function Canvas(
         {elements.map((element) => {
           const fontSize = element.fontSize || 24
           const fontWeight = element.fontWeight || 400
-          // Calculate appropriate line-height based on font size to prevent overlap
-          let lineHeight = 'normal'
-          if (fontSize >= 60 && fontWeight >= 700) {
-            lineHeight = '0.95'
-          } else if (fontSize >= 48) {
-            lineHeight = '1.0'
-          } else if (fontSize >= 32) {
-            lineHeight = '1.1'
-          } else {
-            lineHeight = '1.2'
+          // Use element's lineHeight if set, otherwise calculate appropriate line-height based on font size
+          let lineHeight = element.lineHeight
+          if (!lineHeight) {
+            if (fontSize >= 60 && fontWeight >= 700) {
+              lineHeight = '0.95'
+            } else if (fontSize >= 48) {
+              lineHeight = '1.0'
+            } else if (fontSize >= 32) {
+              lineHeight = '1.1'
+            } else {
+              lineHeight = '1.2'
+            }
+          } else if (typeof lineHeight === 'number') {
+            lineHeight = lineHeight.toString()
           }
           
           return (

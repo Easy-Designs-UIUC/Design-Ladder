@@ -697,6 +697,7 @@ function EditorPage() {
           onSelectProject={handleProjectSelect}
           suggestions={suggestions}
           template={appState.selectedTemplate}
+          canvasElements={canvasElements}
           hasUnsavedChanges={hasUnsavedChanges}
         />
 
@@ -759,7 +760,7 @@ function EditorPage() {
             }}
             onApplySuggestion={(type, value) => {
               if (selectedElement) {
-                console.log('Applying suggestion:', { type, value, selectedElement })
+                console.log('🎨 Applying suggestion:', { type, value, selectedElement })
                 if (type === 'font') {
                   handleUpdateElement(selectedElement, { font: value })
                 } else if (type === 'color' || type === 'background-color') {
@@ -768,6 +769,10 @@ function EditorPage() {
                 } else if (type === 'text-color') {
                   console.log('Setting text color to:', value)
                   handleUpdateElement(selectedElement, { color: value })
+                } else if (type === 'fontSize') {
+                  handleUpdateElement(selectedElement, { fontSize: value })
+                } else if (type === 'lineHeight') {
+                  handleUpdateElement(selectedElement, { lineHeight: value })
                 }
               }
             }}

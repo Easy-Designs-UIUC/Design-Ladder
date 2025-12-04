@@ -8,6 +8,7 @@ import eventMinimalBlack from '../assets/templates/event-minimal-black.png'
 import organizationalWarm from '../assets/templates/organizational-warm.png'
 import eventFestival from '../assets/templates/event-festival.png'
 import researchBold from '../assets/templates/research-bold.png'
+import { getDefaultEmojiPosition } from './templateUtils'
 
 export const templates = [
   {
@@ -53,7 +54,7 @@ export const templates = [
             fontFamily: 'Inter',
             fontSize: 32,
             fontWeight: 600,
-            fill: '#312e81',
+            fill: '#1e3a8a',
             textAlign: 'left'
           }
         },
@@ -62,7 +63,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Use this space to summarize your abstract, methodology, and outcomes in a concise narrative.',
-          position: { x: 60, y: 270 },
+          position: { x: 60, y: 280 },
           styleName: 'body',
           style: {
             fontFamily: 'Inter',
@@ -70,7 +71,7 @@ export const templates = [
             fontWeight: 400,
             fill: '#111827',
             backgroundColor: '#dbeafe',
-            maxWidth: 640
+            maxWidth: 620
           }
         },
         {
@@ -78,13 +79,13 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Highlight Metrics',
-          position: { x: 60, y: 420 },
+          position: { x: 60, y: 430 },
           styleName: 'heading',
           style: {
             fontFamily: 'Inter',
             fontSize: 28,
             fontWeight: 700,
-            fill: '#1d4ed8'
+            fill: '#1e40af'
           }
         },
         {
@@ -92,15 +93,15 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: '• 98% accuracy achieved\n• 12-month longitudinal study\n• 240 participants interviewed',
-          position: { x: 60, y: 490 },
+          position: { x: 60, y: 500 },
           styleName: 'body',
           style: {
             fontFamily: 'Inter',
             fontSize: 20,
             fontWeight: 500,
-            fill: '#1e293b',
+            fill: '#0f172a',
             backgroundColor: '#e0f2fe',
-            maxWidth: 620
+            maxWidth: 600
           }
         },
         {
@@ -109,14 +110,7 @@ export const templates = [
           elementType: 'chart',
           style: 'chart',
           icon: '📊',
-          position: { x: 620, y: 760 }
-        },
-        {
-          id: 'insight-icon',
-          type: 'element',
-          style: 'lightbulb',
-          icon: '💡',
-          position: { x: 700, y: 220 }
+          position: { x: 620, y: 920 }
         }
       ]
     }
@@ -171,7 +165,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Overview',
-          position: { x: 70, y: 240 },
+          position: { x: 70, y: 250 },
           styleName: 'heading',
           style: {
             fontFamily: 'Inter',
@@ -187,7 +181,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Summarize the data themes, methodology, and headline insights here.',
-          position: { x: 70, y: 310 },
+          position: { x: 70, y: 320 },
           styleName: 'body',
           style: {
             fontFamily: 'Inter',
@@ -203,7 +197,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Top Metric',
-          position: { x: 420, y: 240 },
+          position: { x: 420, y: 250 },
           styleName: 'heading',
           style: {
             fontFamily: 'Inter',
@@ -217,13 +211,13 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Highlight a key value or percentage.\nBack it with a short supporting statement.',
-          position: { x: 420, y: 300 },
+          position: { x: 420, y: 310 },
           styleName: 'body',
           style: {
             fontFamily: 'Inter',
             fontSize: 22,
             fontWeight: 600,
-            fill: '#047857',
+            fill: '#065f46',
             backgroundColor: '#fef9c3',
             maxWidth: 280
           }
@@ -233,14 +227,7 @@ export const templates = [
           type: 'element',
           style: 'chart',
           icon: '📊',
-          position: { x: 420, y: 460 }
-        },
-        {
-          id: 'callout-emoji',
-          type: 'element',
-          style: 'lightbulb',
-          icon: '💡',
-          position: { x: 680, y: 820 }
+          position: { x: 660, y: 920 }
         }
       ]
     }
@@ -282,7 +269,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Saturday • Doors at 8 PM',
-          position: { x: 80, y: 230 },
+          position: { x: 80, y: 240 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Montserrat',
@@ -296,15 +283,15 @@ export const templates = [
           type: 'text',
           style: 'body',
                 content: 'Join us for a high-energy night packed with music, lights, and unforgettable experiences. Secure your tickets now!',
-                position: { x: 80, y: 310 },
+                position: { x: 80, y: 320 },
                 styleName: 'body',
                 style: {
                   fontFamily: 'Montserrat',
             fontSize: 24,
             fontWeight: 500,
-            fill: '#fef3c7',
-            backgroundColor: '#701a75',
-            maxWidth: 580
+            fill: '#fef9c7',
+            backgroundColor: '#581c87',
+            maxWidth: 520
           }
         },
         {
@@ -312,13 +299,13 @@ export const templates = [
           type: 'text',
           style: 'heading',
                 content: 'RSVP: neon.night/events',
-                position: { x: 80, y: 460 },
+                position: { x: 80, y: 480 },
                 styleName: 'heading',
                 style: {
                   fontFamily: 'Montserrat',
             fontSize: 30,
             fontWeight: 700,
-            fill: '#fde047',
+            fill: '#facc15',
             backgroundColor: '#581c87'
           }
         },
@@ -327,14 +314,7 @@ export const templates = [
           type: 'element',
           style: 'illustration',
           icon: '🌸',
-          position: { x: 620, y: 180 }
-        },
-        {
-          id: 'arrow-element',
-          type: 'element',
-          style: 'callout',
-          icon: '💡',
-          position: { x: 660, y: 400 }
+          position: { x: 620, y: 920 }
         }
       ]
     }
@@ -376,7 +356,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Celebrate local heroes and volunteers.',
-          position: { x: 70, y: 260 },
+          position: { x: 70, y: 270 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Nunito',
@@ -390,7 +370,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Stories',
-          position: { x: 70, y: 370 },
+          position: { x: 70, y: 380 },
           styleName: 'heading',
           style: {
             fontFamily: 'Nunito',
@@ -405,15 +385,15 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Share highlights from recent community projects, volunteers, and upcoming needs.',
-          position: { x: 70, y: 430 },
+          position: { x: 70, y: 440 },
           styleName: 'body',
           style: {
             fontFamily: 'Nunito',
             fontSize: 22,
             fontWeight: 500,
-            fill: '#7c2d12',
+            fill: '#78350f',
             backgroundColor: '#fde68a',
-            maxWidth: 600
+            maxWidth: 560
           }
         },
         {
@@ -421,13 +401,13 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Get Involved →',
-          position: { x: 70, y: 590 },
+          position: { x: 70, y: 600 },
           styleName: 'heading',
           style: {
             fontFamily: 'Nunito',
             fontSize: 28,
             fontWeight: 700,
-            fill: '#ea580c',
+            fill: '#c2410c',
             backgroundColor: '#fed7aa'
           }
         },
@@ -436,14 +416,7 @@ export const templates = [
           type: 'element',
           style: 'illustration',
           icon: '🌸',
-          position: { x: 660, y: 260 }
-        },
-        {
-          id: 'star-element',
-          type: 'element',
-          style: 'lightbulb',
-          icon: '💡',
-          position: { x: 640, y: 520 }
+          position: { x: 600, y: 920 }
         }
       ]
     }
@@ -484,7 +457,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Quarterly updates & key initiatives',
-          position: { x: 80, y: 150 },
+          position: { x: 80, y: 160 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'IBM Plex Sans',
@@ -498,7 +471,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Summarize headline wins, KPIs, and leadership messages in this section.',
-          position: { x: 80, y: 230 },
+          position: { x: 80, y: 240 },
           styleName: 'body',
           style: {
             fontFamily: 'IBM Plex Sans',
@@ -514,7 +487,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Highlights',
-          position: { x: 80, y: 380 },
+          position: { x: 80, y: 390 },
           styleName: 'heading',
           style: {
             fontFamily: 'IBM Plex Sans',
@@ -528,7 +501,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: '• Milestone 1 achieved\n• Initiative 2 on track\n• New partnership announced',
-          position: { x: 80, y: 430 },
+          position: { x: 80, y: 440 },
           styleName: 'body',
           style: {
             fontFamily: 'IBM Plex Sans',
@@ -544,7 +517,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Questions? Contact comms@company.com',
-          position: { x: 80, y: 640 },
+          position: { x: 80, y: 650 },
           styleName: 'body',
           style: {
             fontFamily: 'IBM Plex Sans',
@@ -560,7 +533,7 @@ export const templates = [
           type: 'element',
           style: 'chart',
           icon: '📊',
-          position: { x: 600, y: 520 }
+          position: { x: 600, y: 920 }
         }
       ]
     }
@@ -601,7 +574,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Environmental impact study',
-          position: { x: 60, y: 160 },
+          position: { x: 60, y: 170 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Caveat',
@@ -615,7 +588,7 @@ export const templates = [
           type: 'text',
           style: 'body',
                 content: 'Outline your methods, fieldwork summaries, and insights in this space.',
-                position: { x: 60, y: 240 },
+                position: { x: 60, y: 250 },
                 styleName: 'body',
                 style: {
                   fontFamily: 'Caveat',
@@ -623,7 +596,7 @@ export const templates = [
             fontWeight: 500,
             fill: '#1f2937',
             backgroundColor: '#dcfce7',
-            maxWidth: 580
+            maxWidth: 520
           }
         },
         {
@@ -631,7 +604,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
                 content: '"Data gathered over three seasons highlights strong biodiversity recovery."',
-                position: { x: 60, y: 380 },
+                position: { x: 60, y: 390 },
                 styleName: 'heading',
                 style: {
                   fontFamily: 'Caveat',
@@ -639,7 +612,7 @@ export const templates = [
             fontWeight: 600,
             fill: '#166534',
             backgroundColor: '#bbf7d0',
-            maxWidth: 560
+            maxWidth: 520
           }
         },
         {
@@ -647,14 +620,7 @@ export const templates = [
           type: 'element',
           style: 'photo',
           icon: '📷',
-          position: { x: 600, y: 240 }
-        },
-        {
-          id: 'chart-icon',
-          type: 'element',
-          style: 'chart',
-          icon: '📊',
-          position: { x: 620, y: 540 }
+          position: { x: 600, y: 920 }
         }
       ]
     }
@@ -696,7 +662,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Tech Hackathon',
-          position: { x: 90, y: 220 },
+          position: { x: 90, y: 230 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Montserrat',
@@ -710,7 +676,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Schedule Highlights:\n09:00 • Keynote kickoff\n12:00 • Lightning talks\n18:00 • Awards & networking',
-          position: { x: 90, y: 300 },
+          position: { x: 90, y: 310 },
           styleName: 'body',
           style: {
             fontFamily: 'Montserrat',
@@ -718,7 +684,7 @@ export const templates = [
             fontWeight: 600,
             fill: '#e2e8f0',
             backgroundColor: '#1f2937',
-            maxWidth: 520
+            maxWidth: 500
           }
         },
         {
@@ -726,7 +692,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Register now →',
-          position: { x: 90, y: 520 },
+          position: { x: 90, y: 540 },
           styleName: 'heading',
           style: {
             fontFamily: 'Montserrat',
@@ -741,14 +707,7 @@ export const templates = [
           type: 'element',
           style: 'callout',
           icon: '💡',
-          position: { x: 620, y: 260 }
-        },
-        {
-          id: 'star-icon',
-          type: 'element',
-          style: 'illustration',
-          icon: '🌸',
-          position: { x: 620, y: 540 }
+          position: { x: 600, y: 920 }
         }
       ]
     }
@@ -781,7 +740,7 @@ export const templates = [
             fontFamily: 'Mukta',
             fontSize: 66,
             fontWeight: 800,
-            fill: '#ea580c',
+            fill: '#c2410c',
             backgroundColor: '#fed7aa'
           }
         },
@@ -790,7 +749,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Progress & impact from the field',
-          position: { x: 70, y: 170 },
+          position: { x: 70, y: 180 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Mukta',
@@ -804,13 +763,13 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Impact Snapshot',
-          position: { x: 70, y: 260 },
+          position: { x: 70, y: 270 },
           styleName: 'heading',
           style: {
             fontFamily: 'Mukta',
             fontSize: 28,
             fontWeight: 700,
-            fill: '#a16207',
+            fill: '#78350f',
             backgroundColor: '#fef08a'
           }
         },
@@ -819,15 +778,15 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Summarize this quarter\'s outcomes, partnerships, and upcoming priorities.',
-          position: { x: 70, y: 320 },
+          position: { x: 70, y: 330 },
           styleName: 'body',
           style: {
             fontFamily: 'Mukta',
             fontSize: 22,
             fontWeight: 500,
-            fill: '#7c2d12',
+            fill: '#78350f',
             backgroundColor: '#fef3c7',
-            maxWidth: 600
+            maxWidth: 560
           }
         },
         {
@@ -835,15 +794,15 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: '"Volunteer voices remind us why we do this work."',
-          position: { x: 70, y: 460 },
+          position: { x: 70, y: 470 },
           styleName: 'heading',
           style: {
             fontFamily: 'Mukta',
             fontSize: 24,
             fontWeight: 700,
-            fill: '#ea580c',
+            fill: '#ef4444',
             backgroundColor: '#fde68a',
-            maxWidth: 580
+            maxWidth: 560
           }
         },
         {
@@ -851,14 +810,7 @@ export const templates = [
           type: 'element',
           style: 'illustration',
           icon: '🌸',
-          position: { x: 650, y: 260 }
-        },
-        {
-          id: 'lightbulb-icon',
-          type: 'element',
-          style: 'lightbulb',
-          icon: '💡',
-          position: { x: 640, y: 520 }
+          position: { x: 620, y: 920 }
         }
       ]
     }
@@ -900,13 +852,13 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Fundraiser & live performances',
-          position: { x: 80, y: 200 },
+          position: { x: 80, y: 210 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Baloo 2',
             fontSize: 36,
             fontWeight: 700,
-            fill: '#fb923c'
+            fill: '#c2410c'
           }
         },
         {
@@ -914,7 +866,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Line-up',
-          position: { x: 80, y: 280 },
+          position: { x: 80, y: 290 },
           styleName: 'heading',
           style: {
             fontFamily: 'Baloo 2',
@@ -929,15 +881,15 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'List headliners, activities, and special attractions here.',
-          position: { x: 80, y: 340 },
+          position: { x: 80, y: 350 },
           styleName: 'body',
           style: {
             fontFamily: 'Baloo 2',
             fontSize: 24,
             fontWeight: 600,
-            fill: '#7c2d12',
+            fill: '#78350f',
             backgroundColor: '#fde68a',
-            maxWidth: 620
+            maxWidth: 560
           }
         },
         {
@@ -945,13 +897,13 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Tickets available now →',
-          position: { x: 80, y: 500 },
+          position: { x: 80, y: 520 },
           styleName: 'heading',
           style: {
             fontFamily: 'Baloo 2',
             fontSize: 28,
             fontWeight: 700,
-            fill: '#ea580c',
+            fill: '#c2410c',
             backgroundColor: '#fff7ed'
           }
         },
@@ -960,14 +912,7 @@ export const templates = [
           type: 'element',
           style: 'illustration',
           icon: '🌸',
-          position: { x: 660, y: 220 }
-        },
-        {
-          id: 'arrow-icon',
-          type: 'element',
-          style: 'callout',
-          icon: '💡',
-          position: { x: 640, y: 520 }
+          position: { x: 620, y: 920 }
         }
       ]
     }
@@ -1008,7 +953,7 @@ export const templates = [
           type: 'text',
           style: 'subtitle',
           content: 'Problem statement & outcomes',
-          position: { x: 70, y: 170 },
+          position: { x: 70, y: 180 },
           styleName: 'subtitle',
           style: {
             fontFamily: 'Playfair Display',
@@ -1022,7 +967,7 @@ export const templates = [
           type: 'text',
           style: 'body',
           content: 'Outline the challenge, approach, and measurable impact in this space.',
-          position: { x: 70, y: 250 },
+          position: { x: 70, y: 260 },
           styleName: 'body',
           style: {
             fontFamily: 'Playfair Display',
@@ -1030,7 +975,7 @@ export const templates = [
             fontWeight: 500,
             fill: '#1f2937',
             backgroundColor: '#c7d2fe',
-            maxWidth: 600
+            maxWidth: 520
           }
         },
         {
@@ -1038,7 +983,7 @@ export const templates = [
           type: 'text',
           style: 'heading',
           content: 'Impact Visualization',
-          position: { x: 70, y: 420 },
+          position: { x: 70, y: 430 },
           styleName: 'heading',
           style: {
             fontFamily: 'Playfair Display',
@@ -1052,17 +997,31 @@ export const templates = [
           type: 'element',
           style: 'chart',
           icon: '📊',
-          position: { x: 600, y: 440 }
-        },
-        {
-          id: 'insight-element',
-          type: 'element',
-          style: 'lightbulb',
-          icon: '💡',
-          position: { x: 640, y: 720 }
+          position: { x: 620, y: 920 }
         }
       ]
     }
   }
 ]
+
+// Apply centralized emoji positions to all templates
+// All emoji elements are automatically positioned based on config in templateUtils.js
+// To adjust emoji position for all templates, modify EMOJI_POSITION_CONFIG in templateUtils.js
+templates.forEach(template => {
+  if (template.layout?.canvasSize) {
+    const emojiElements = template.layout.elements.filter(
+      el => el.type === 'element' && el.icon
+    )
+    
+    if (emojiElements.length > 0) {
+      // Calculate position based on canvas size using centralized config
+      const calculatedPosition = getDefaultEmojiPosition(template.layout.canvasSize)
+      
+      // Update all emoji elements to use the calculated position
+      emojiElements.forEach(element => {
+        element.position = calculatedPosition
+      })
+    }
+  }
+})
 

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getColorHex, COLOR_MAP } from '../utils/colorUtils'
+import { templates } from '../data/templates'
 import './LeftToolbar.css'
 
 function LeftToolbar({ 
@@ -71,31 +72,39 @@ function LeftToolbar({
     return Object.keys(COLOR_MAP).filter(name => name !== 'transparent')
   }, [])
   
-  // Use template-based colors if available, otherwise use template background or defaults
+  // Extract all unique background colors from all templates
   const backgroundColors = useMemo(() => {
-    if (suggestions?.colors && suggestions.colors.length > 0) {
-      return suggestions.colors.map(color => ({
-        id: color.toLowerCase().replace(/\s+/g, '-'),
-        name: color,
-        color: getColorHex(color)
-      }))
-    }
-    // Fallback: use template background if available
-    if (template?.layout?.background) {
-      return [{
-        id: 'template-bg',
-        name: 'Template Background',
-        color: template.layout.background
-      }]
-    }
-    // Default backgrounds
+    // Collect all unique background colors from all templates
+    const templateBackgrounds = new Set()
+    templates.forEach(t => {
+      if (t?.layout?.background) {
+        templateBackgrounds.add(t.layout.background.toLowerCase())
+      }
+    })
+    
+    // Convert to array of objects with names
+    const backgroundOptions = Array.from(templateBackgrounds).map((bgHex, index) => {
+      // Try to find a template name that uses this background for a friendly name
+      const templateUsingBg = templates.find(t => 
+        t?.layout?.background?.toLowerCase() === bgHex
+      )
+      const name = templateUsingBg 
+        ? `${templateUsingBg.name} Background`
+        : `Background ${index + 1}`
+      
+      return {
+        id: `bg-${index}`,
+        name: name,
+        color: bgHex
+      }
+    })
+    
+    // Always include white as the first option
     return [
       { id: 'white', name: 'White', color: '#ffffff' },
-      { id: 'light-gray', name: 'Light Gray', color: '#f0f0f0' },
-      { id: 'gray', name: 'Gray', color: '#e8e8e8' },
-      { id: 'dark-gray', name: 'Dark Gray', color: '#d0d0d0' }
+      ...backgroundOptions
     ]
-  }, [suggestions, template])
+  }, [])
   
   const elements = [
     { id: 'flower', name: 'Flower', icon: '🌸', elementType: 'flower' },
@@ -169,7 +178,14 @@ function LeftToolbar({
   }
 
   const handleBackgroundClick = (bg) => {
-    onBackgroundChange(bg.color)
+    // Ensure background color is properly formatted (with # prefix)
+    let bgColor = bg.color
+    if (bgColor && !bgColor.startsWith('#')) {
+      bgColor = '#' + bgColor
+    }
+    // Normalize to lowercase for consistency
+    bgColor = bgColor?.toLowerCase() || '#ffffff'
+    onBackgroundChange(bgColor)
   }
 
   const handleDownloadOption = (format) => {

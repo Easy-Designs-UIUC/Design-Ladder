@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { AppContext } from '../context/AppContext'
 import { getSuggestions } from '../data/suggestions'
+import { getSuggestionKey } from '../utils/suggestionKeyUtils'
 import LeftToolbar from '../components/LeftToolbar'
 import Canvas from '../components/Canvas'
 import SuggestionsSidebar from '../components/SuggestionsSidebar'
@@ -145,23 +146,25 @@ function EditorPage() {
       }
     }
     
-    // Filter out ignored suggestions and recalculate score
+    // Calculate score based on ignored suggestions, but keep ALL suggestions for display
+    // The sidebar will handle filtering active vs ignored suggestions
     const elementSuggestions = baseSuggestions.elementSuggestions || []
     
     if (ignoredSuggestions.size > 0 && elementSuggestions.length > 0) {
-      const filteredSuggestions = elementSuggestions.filter((suggestion, index) => {
-        const key = `${suggestion.elementId}-${suggestion.type}-${index}`
-        return !ignoredSuggestions.has(key)
-      })
+      // Count ignored suggestions for score calculation
+      const ignoredCount = elementSuggestions.filter((suggestion) => {
+        const key = getSuggestionKey(suggestion)
+        return ignoredSuggestions.has(key)
+      }).length
       
-      const ignoredCount = elementSuggestions.length - filteredSuggestions.length
       const totalSuggestions = elementSuggestions.length
       
       // If all suggestions are ignored, score goes to 100%
       if (ignoredCount === totalSuggestions && totalSuggestions > 0) {
         return {
           ...baseSuggestions,
-          elementSuggestions: filteredSuggestions,
+          // Keep all suggestions - sidebar will filter them
+          elementSuggestions: elementSuggestions,
           designScore: 100
         }
       }
@@ -174,7 +177,8 @@ function EditorPage() {
       
       return {
         ...baseSuggestions,
-        elementSuggestions: filteredSuggestions,
+        // Keep all suggestions - sidebar will filter them
+        elementSuggestions: elementSuggestions,
         designScore: Math.min(100, Math.round(baseSuggestions.designScore + scoreImprovement))
       }
     }
@@ -190,8 +194,8 @@ function EditorPage() {
   }, [history, historyIndex])
 
   useEffect(() => {
-    // Don't rebuild from template if we're loading a project AND template hasn't changed
-    // (project loading useEffect will handle setting elements)
+    // Only rebuild when template ID actually changes, not when activeProjectId changes
+    // This prevents the canvas from resetting while editing
     const currentTemplateId = appState.selectedTemplate?.id
     
     // Don't rebuild if we don't have a template
@@ -200,17 +204,16 @@ function EditorPage() {
       return
     }
     
-    // Always rebuild if template ID changed (even if there's an active project)
+    // Only rebuild if template ID actually changed
     const templateChanged = lastLoadedTemplateId.current !== currentTemplateId
     
-    // Skip only if: active project was just loaded AND template hasn't changed
-    if (appState.activeProjectId && 
-        lastLoadedProjectId.current === appState.activeProjectId &&
-        !templateChanged) {
+    // If template hasn't changed, don't rebuild (this prevents resets during editing)
+    if (!templateChanged) {
       return
     }
     
-    // If template changed (or no project), rebuild canvas from template
+    // Template changed - rebuild canvas from template
+    // Note: Project loading effect handles its own template restoration, so we don't need to check for that here
     const { elements, background } = buildTemplateState(appState.selectedTemplate)
     setCanvasElements(elements)
     setHistory([elements.map(el => ({ ...el }))])
@@ -219,11 +222,16 @@ function EditorPage() {
     setCanvasBackground(background)
     lastLoadedTemplateId.current = currentTemplateId
     
+    // Set template's color palette as the selected color scheme for suggestions
+    if (appState.selectedTemplate?.colorPalette && Array.isArray(appState.selectedTemplate.colorPalette)) {
+      selectedColorsRef.current = appState.selectedTemplate.colorPalette
+    }
+    
     // If no active project, reset project tracking so template changes work
     if (!appState.activeProjectId) {
       lastLoadedProjectId.current = null
     }
-  }, [appState.selectedTemplate, appState.activeProjectId])
+  }, [appState.selectedTemplate?.id]) // Only depend on template ID to prevent unnecessary rebuilds
 
   const elementsEqual = (a = [], b = []) => {
     if (a.length !== b.length) return false
@@ -433,6 +441,7 @@ function EditorPage() {
     lastLoadedProjectDate.current = activeProject.date
 
     // Only restore template if it's different and we're actually loading (not just saving)
+    const templateToUse = activeProject.template || appState.selectedTemplate
     if (activeProject.template && activeProject.template !== appState.selectedTemplate) {
       // Update template, but lastLoadedProjectId is already set so rebuild won't happen
       setAppState(prev => ({
@@ -442,6 +451,11 @@ function EditorPage() {
       lastLoadedTemplateId.current = activeProject.template?.id || null
     } else {
       lastLoadedTemplateId.current = appState.selectedTemplate?.id || null
+    }
+
+    // Set template's color palette as the selected color scheme for suggestions
+    if (templateToUse?.colorPalette && Array.isArray(templateToUse.colorPalette)) {
+      selectedColorsRef.current = templateToUse.colorPalette
     }
 
     // Load the saved elements (this preserves the canvas state)

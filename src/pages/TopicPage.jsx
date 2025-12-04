@@ -11,6 +11,12 @@ function TopicPage() {
   const [customTopic, setCustomTopic] = useState('')
 
   const topics = ['VOLUNTEERING', 'HACKATHON', 'FUNDRAISER', 'CONFERENCE']
+  const topicInfo = {
+    'VOLUNTEERING': 'Community-focused posters. Use friendly language and clear calls-to-action to encourage participation.',
+    'HACKATHON': 'Technical, timeboxed event posters — highlight date, prizes, and submission details.',
+    'FUNDRAISER': 'Emphasize cause, amounts, and how to donate; use emotive imagery and clear CTAs.',
+    'CONFERENCE': 'Structured schedules and speaker info — favor readable hierarchies and session blocks.'
+  }
 
   const handleTopicClick = (topic) => {
     if (selectedTopics.includes(topic)) {
@@ -60,8 +66,8 @@ function TopicPage() {
         <h1 className="app-logo">DESIGN LADDER</h1>
       </div>
       <div className="topic-container">
-        <h2 className="topic-title">WHAT IS YOUR PROJECT TOPIC?</h2>
-        <h3 className="topic-subtitle">PICK UP TO 3:</h3>
+  <h2 className="topic-title">WHAT IS YOUR PROJECT TOPIC? <span className="required">(Required)</span></h2>
+  <h3 className="topic-subtitle">PICK UP TO 3: <span className="muted-small">Selecting 1–3 topics helps the engine recommend templates and content that match your subject and tone.</span></h3>
 
         <div className="topic-content">
           <div className="topic-selection">
@@ -72,7 +78,8 @@ function TopicPage() {
                 onClick={() => handleTopicClick(topic)}
                 disabled={!selectedTopics.includes(topic) && selectedTopics.length >= 3}
               >
-                {topic}
+                <span className="topic-label">{topic}</span>
+                <span className="info-icon" data-tooltip={topicInfo[topic]}>ⓘ</span>
               </button>
             ))}
             <div className="custom-topic-section">

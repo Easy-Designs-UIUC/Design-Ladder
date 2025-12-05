@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { getColorHex } from '../utils/colorUtils'
+import { getSuggestionKey } from '../utils/suggestionKeyUtils'
 import './SuggestionsSidebar.css'
 
 // Normalize font for comparison
@@ -11,14 +12,6 @@ const normalizeFont = (font) => {
   } catch {
     return ''
   }
-}
-
-// Generate unique key for a suggestion
-const getSuggestionKey = (suggestion, index) => {
-  if (!suggestion) return `unknown-${index}`
-  const elementId = suggestion.elementId || 'unknown'
-  const type = suggestion.type || 'unknown'
-  return `${elementId}-${type}-${index}`
 }
 
 function SuggestionsSidebar({ 
@@ -40,38 +33,49 @@ function SuggestionsSidebar({
   
   // Filter suggestions based on ignored state
   const activeSuggestions = useMemo(() => {
-    return allSuggestions.filter((suggestion, index) => {
-      const key = getSuggestionKey(suggestion, index)
+    return allSuggestions.filter((suggestion) => {
+      const key = getSuggestionKey(suggestion, 0) // index not used anymore
       return !ignoredSuggestions.has(key)
     })
   }, [allSuggestions, ignoredSuggestions])
-  
+
   const ignoredSuggestionsList = useMemo(() => {
-    return allSuggestions.filter((suggestion, index) => {
-      const key = getSuggestionKey(suggestion, index)
+    return allSuggestions.filter((suggestion) => {
+      const key = getSuggestionKey(suggestion, 0) // index not used anymore
       return ignoredSuggestions.has(key)
     })
   }, [allSuggestions, ignoredSuggestions])
   
   // Group suggestions by element ID for better organization
-  const groupSuggestionsByElement = (suggestionsList) => {
+  // We need to track the original index from allSuggestions for consistent key generation
+  const groupSuggestionsByElement = (suggestionsList, allSuggestionsList) => {
     const grouped = {}
-    suggestionsList.forEach((suggestion, index) => {
+    suggestionsList.forEach((suggestion, filteredIndex) => {
+      // Find the original index in allSuggestions
+      const originalIndex = allSuggestionsList.findIndex((s, idx) => {
+        // Match by elementId and type to find the same suggestion
+        return s.elementId === suggestion.elementId && 
+               s.type === suggestion.type &&
+               // Also match by message to be more specific
+               s.message === suggestion.message
+      })
+      const indexToUse = originalIndex >= 0 ? originalIndex : filteredIndex
+      
       if (!grouped[suggestion.elementId]) {
         grouped[suggestion.elementId] = []
       }
-      grouped[suggestion.elementId].push({ ...suggestion, originalIndex: index })
+      grouped[suggestion.elementId].push({ ...suggestion, originalIndex: indexToUse })
     })
     return grouped
   }
   
   const activeSuggestionsByElement = useMemo(() => {
-    return groupSuggestionsByElement(activeSuggestions)
-  }, [activeSuggestions])
-  
+    return groupSuggestionsByElement(activeSuggestions, allSuggestions)
+  }, [activeSuggestions, allSuggestions])
+
   const ignoredSuggestionsByElement = useMemo(() => {
-    return groupSuggestionsByElement(ignoredSuggestionsList)
-  }, [ignoredSuggestionsList])
+    return groupSuggestionsByElement(ignoredSuggestionsList, allSuggestions)
+  }, [ignoredSuggestionsList, allSuggestions])
   
   // Get element info for display
   const getElementInfo = (elementId) => {
@@ -79,7 +83,13 @@ function SuggestionsSidebar({
     const element = (canvasElements || []).find(el => el?.id === elementId)
     if (!element) {
       // Element might be missing from canvas (e.g., a missing template element)
-      return { type: 'unknown', label: String(elementId), style: 'missing' }
+      // Try to extract a readable name from the ID if it's a timestamp
+      let label = String(elementId)
+      if (/^\d+$/.test(elementId) && elementId.length > 10) {
+        // It's a timestamp - show a generic label
+        label = 'Element'
+      }
+      return { type: 'unknown', label: label, style: 'missing' }
     }
     
     if (element.type === 'text') {
@@ -87,7 +97,11 @@ function SuggestionsSidebar({
       const truncated = content.length > 30 ? content.substring(0, 30) + '...' : content
       return { type: element.type, label: truncated, style: element.style || 'body' }
     } else {
-      return { type: element.type, label: element.elementType || 'Element' }
+      // For elements, show icon if available, then elementType, then fallback
+      const icon = element.icon || ''
+      const elementType = element.elementType || element.style || 'Element'
+      const label = icon ? `${icon} ${elementType}` : elementType
+      return { type: element.type, label: label, icon: icon, elementType: elementType }
     }
   }
   
@@ -155,7 +169,8 @@ function SuggestionsSidebar({
                     
                     <div className="element-suggestions-list">
                       {elementSuggestions.map((suggestion, index) => {
-                        const suggestionKey = getSuggestionKey(suggestion, suggestion.originalIndex !== undefined ? suggestion.originalIndex : index)
+                        // Generate stable key that doesn't depend on array position
+                        const suggestionKey = getSuggestionKey(suggestion, 0) // index not used anymore
                         const isIgnored = ignoredSuggestions.has(suggestionKey)
                         
                         // Determine card type
@@ -190,7 +205,9 @@ function SuggestionsSidebar({
                                       className="ignore-btn"
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        onIgnoreSuggestion && onIgnoreSuggestion(suggestionKey)
+                                        if (onIgnoreSuggestion) {
+                                          onIgnoreSuggestion(suggestionKey)
+                                        }
                                       }}
                                       title="Ignore this suggestion"
                                     >
@@ -226,10 +243,15 @@ function SuggestionsSidebar({
                                       style={{ fontFamily: font }}
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        if (selectedElement === elementId) {
-                                          onApplySuggestion('font', font)
-                                        } else {
+                                        // Always select the element first, then apply if already selected
+                                        if (selectedElement !== elementId) {
                                           onSelectElement && onSelectElement(elementId)
+                                          // Apply after a short delay to ensure element is selected
+                                          setTimeout(() => {
+                                            onApplySuggestion('font', font)
+                                          }, 100)
+                                        } else {
+                                          onApplySuggestion('font', font)
                                         }
                                       }}
                                     >
@@ -271,9 +293,21 @@ function SuggestionsSidebar({
                               {isSpacingGroup && (
                                 <div className="card-options">
                                   <div className="spacing-info">
-                                    <p>Current spacing: {suggestion.spacing}px</p>
-                                    <p>Recommended: {suggestion.minRequired}px minimum</p>
-                                    <p className="spacing-hint">Drag elements further apart to improve spacing</p>
+                                    {suggestion.isOverlapping ? (
+                                      <>
+                                        <p style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                                          ⚠️ Overlapping: {Math.abs(suggestion.spacing)}px overlap
+                                        </p>
+                                        <p>Recommended: {suggestion.minRequired}px minimum spacing</p>
+                                        <p className="spacing-hint">Drag elements apart to prevent overlap and improve readability</p>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p>Current spacing: {suggestion.spacing}px</p>
+                                        <p>Recommended: {suggestion.minRequired}px minimum</p>
+                                        <p className="spacing-hint">Drag elements further apart to improve spacing</p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )}

@@ -157,24 +157,99 @@ const checkTemplateCompleteness = (template, canvasElements) => {
     return { score: 100, missing: [], total: 0, present: 0 }
   }
   
-  const templateElementIds = new Set(
-    template.layout.elements.map(el => el.id)
-  )
-  const canvasElementIds = new Set(
-    (canvasElements || []).map(el => el.id)
-  )
+  const templateElements = template.layout.elements
+  const canvasElementsList = canvasElements || []
   
-  const missing = template.layout.elements
-    .filter(el => !canvasElementIds.has(el.id))
-    .map(el => el.id)
+  // Helper to get element style name (for text elements) - normalize for comparison
+  const getElementStyle = (element) => {
+    if (element.type === 'text') {
+      // Check styleName first, then style (could be string or object)
+      const style = element.styleName || 
+                   (typeof element.style === 'string' ? element.style : null) || 
+                   (element.style?.styleName) || 
+                   null
+      // Normalize: lowercase and trim for comparison
+      return style ? String(style).toLowerCase().trim() : null
+    }
+    return null
+  }
   
-  const total = templateElementIds.size
-  const present = total - missing.length
+  // Helper to check if a canvas element matches a template element
+  const elementMatches = (templateEl, canvasEl) => {
+    // First check by ID (exact match)
+    if (canvasEl.id === templateEl.id) {
+      return true
+    }
+    
+    // If types don't match, no match
+    if (templateEl.type !== canvasEl.type) {
+      return false
+    }
+    
+    // For text elements, match by style (case-insensitive)
+    if (templateEl.type === 'text') {
+      const templateStyle = getElementStyle(templateEl)
+      const canvasStyle = getElementStyle(canvasEl)
+      // Also try direct style property if getElementStyle returns null
+      const canvasStyleDirect = canvasEl.style && typeof canvasEl.style === 'string' 
+        ? canvasEl.style.toLowerCase().trim() 
+        : null
+      
+      return (templateStyle && canvasStyle && templateStyle === canvasStyle) ||
+             (templateStyle && canvasStyleDirect && templateStyle === canvasStyleDirect)
+    }
+    
+    // For element/icon types, match by elementType or icon
+    if (templateEl.type === 'element') {
+      const templateElementType = templateEl.elementType || templateEl.style
+      const canvasElementType = canvasEl.elementType || canvasEl.style
+      const templateIcon = templateEl.icon
+      const canvasIcon = canvasEl.icon
+      
+      return (templateElementType && templateElementType === canvasElementType) ||
+             (templateIcon && templateIcon === canvasIcon)
+    }
+    
+    return false
+  }
+  
+  // Check which template elements are present (by ID or by matching type/style)
+  const missing = []
+  const present = []
+  const matchedCanvasElementIds = new Set() // Track which canvas elements have been matched
+  
+  templateElements.forEach(templateEl => {
+    // First check for exact ID match
+    const foundById = canvasElementsList.find(
+      canvasEl => canvasEl.id === templateEl.id && !matchedCanvasElementIds.has(canvasEl.id)
+    )
+    if (foundById) {
+      matchedCanvasElementIds.add(foundById.id)
+      present.push(templateEl.id)
+      return
+    }
+    
+    // Check if any canvas element matches by type/style (that hasn't been matched yet)
+    const foundByMatch = canvasElementsList.find(canvasEl => 
+      !matchedCanvasElementIds.has(canvasEl.id) && elementMatches(templateEl, canvasEl)
+    )
+    if (foundByMatch) {
+      matchedCanvasElementIds.add(foundByMatch.id)
+      present.push(templateEl.id)
+      return
+    }
+    
+    // Element is missing
+    missing.push(templateEl.id)
+  })
+  
+  const total = templateElements.length
+  const presentCount = present.length
   
   // Score is 100% if all elements are present, otherwise percentage
-  const score = total > 0 ? Math.round((present / total) * 100) : 100
+  const score = total > 0 ? Math.round((presentCount / total) * 100) : 100
   
-  return { score, missing, total, present }
+  return { score, missing, total, present: presentCount }
 }
 
 // Normalize font names for comparison
@@ -288,12 +363,17 @@ const checkColorContrast = (canvasElements, canvasBackground) => {
   const elements = canvasElements || []
   const contrastIssues = []
   
+  // Normalize canvas background to ensure consistent format
+  const normalizedCanvasBg = canvasBackground 
+    ? (canvasBackground.startsWith('#') ? canvasBackground.toLowerCase() : '#' + canvasBackground.toLowerCase())
+    : '#ffffff'
+  
   elements.forEach(el => {
     if (el?.type === 'text' && el?.color) {
       // Get background color (element background or canvas background)
       const bgColor = el.backgroundColor && el.backgroundColor !== 'transparent' 
         ? el.backgroundColor 
-        : (canvasBackground || '#ffffff')
+        : normalizedCanvasBg
       
       const contrastRatio = getContrastRatio(el.color, bgColor)
       const fontSize = el.fontSize || 16
@@ -324,62 +404,257 @@ const checkColorContrast = (canvasElements, canvasBackground) => {
   return { score, issues: contrastIssues, total: totalTextElements }
 }
 
-// Estimate element height based on type and properties
-const estimateElementHeight = (element) => {
-  if (!element) return 24
+// Estimate element dimensions based on type and properties
+const estimateElementDimensions = (element) => {
+  if (!element) return { width: 100, height: 24 }
   
   if (element.type === 'text') {
     const fontSize = element.fontSize || 16
-    const lineHeight = 1.5
+    // Calculate line height (use actual lineHeight if set, otherwise estimate)
+    let lineHeight = 1.5
+    if (element.lineHeight) {
+      lineHeight = typeof element.lineHeight === 'string' 
+        ? parseFloat(element.lineHeight) 
+        : element.lineHeight
+    } else {
+      // Estimate based on font size
+      if (fontSize >= 60) lineHeight = 0.95
+      else if (fontSize >= 48) lineHeight = 1.0
+      else if (fontSize >= 32) lineHeight = 1.1
+      else lineHeight = 1.2
+    }
+    
     const content = element.content || ''
-    const lines = content.split('\n').length
-    return Math.max(fontSize * lineHeight * lines, fontSize)
-  }
-  
-  // For non-text elements, use a default size
-  return element.height || 40
-}
-
-// Check spacing between elements
-const checkSpacing = (canvasElements) => {
-  const elements = canvasElements || []
-  const spacingIssues = []
-  const minSpacing = 20 // Minimum recommended spacing in pixels
-  
-  // Filter out elements without valid positions
-  const validElements = elements.filter(el => 
-    el && typeof el.y === 'number' && typeof el.x === 'number'
-  )
-  
-  // Sort elements by y position
-  const sortedElements = [...validElements].sort((a, b) => a.y - b.y)
-  
-  for (let i = 0; i < sortedElements.length - 1; i++) {
-    const current = sortedElements[i]
-    const next = sortedElements[i + 1]
+    const lines = content.split('\n').length || 1
+    // More conservative height estimation - don't overestimate
+    const height = fontSize * lineHeight * lines
     
-    // Check vertical spacing using estimated height
-    const currentHeight = estimateElementHeight(current)
-    const currentBottom = current.y + currentHeight
-    const spacing = next.y - currentBottom
+    // Estimate width - use maxWidth if set, otherwise estimate based on content
+    let width = element.maxWidth || 200
+    if (!element.maxWidth && content) {
+      // Rough estimate: average 0.6 * fontSize per character
+      const linesArray = content.split('\n')
+      const avgCharsPerLine = linesArray.length > 0 
+        ? Math.max(...linesArray.map(line => line.length))
+        : content.length
+      width = Math.min(avgCharsPerLine * fontSize * 0.6, 600) // Cap at 600px
+    }
     
-    // Only flag if elements are vertically close but not overlapping
-    if (spacing >= 0 && spacing < minSpacing) {
-      spacingIssues.push({
-        elementId1: current.id,
-        elementId2: next.id,
-        spacing: Math.round(spacing),
-        minRequired: minSpacing
-      })
+    // Account for padding (canvas elements have 0.5rem = 8px padding)
+    const padding = 16 // 8px on each side
+    return { 
+      width: width + padding, 
+      height: height + padding 
     }
   }
   
-  const totalComparisons = Math.max(0, sortedElements.length - 1)
+  // For non-text elements (icons, etc.), use default size
+  return { 
+    width: element.width || 60, 
+    height: element.height || 60 
+  }
+}
+
+// Check spacing between elements - improved to detect overlaps and check all pairs
+const checkSpacing = (canvasElements, template = null) => {
+  const elements = canvasElements || []
+  const spacingIssues = []
+  
+  // Get template element IDs and their original positions
+  // We only skip spacing checks if elements are at their original template positions
+  const templateElementData = new Map()
+  if (template?.layout?.elements) {
+    template.layout.elements.forEach(templateEl => {
+      if (templateEl.id) {
+        const templatePos = templateEl.position || {}
+        templateElementData.set(templateEl.id, {
+          x: typeof templatePos.x === 'number' ? templatePos.x : templateEl.x || 0,
+          y: typeof templatePos.y === 'number' ? templatePos.y : templateEl.y || 0
+        })
+      }
+    })
+  }
+  
+  // Check if an element is from the template AND still at its original position
+  const isAtOriginalTemplatePosition = (element) => {
+    if (!element?.id || !templateElementData.has(element.id)) {
+      return false
+    }
+    const templatePos = templateElementData.get(element.id)
+    const currentX = element.x || 0
+    const currentY = element.y || 0
+    // Allow 5px tolerance for rounding/rendering differences
+    const dx = Math.abs(currentX - templatePos.x)
+    const dy = Math.abs(currentY - templatePos.y)
+    return dx < 5 && dy < 5
+  }
+  
+  // Minimum recommended spacing based on element type
+  // Made more lenient to avoid flagging template defaults
+  const getMinSpacing = (el1, el2) => {
+    // Larger spacing needed for larger text elements
+    const fontSize1 = el1?.fontSize || 16
+    const fontSize2 = el2?.fontSize || 16
+    const maxFontSize = Math.max(fontSize1, fontSize2)
+    
+    // Scale minimum spacing based on font size - reduced thresholds
+    // Only flag spacing that's clearly problematic, not template defaults
+    if (maxFontSize >= 48) return 15 // Large titles - reduced from 30
+    if (maxFontSize >= 32) return 12 // Headings - reduced from 25
+    return 10 // Body text and small elements - reduced from 20
+  }
+  
+  // Filter out elements without valid positions
+  const validElements = elements.filter(el => 
+    el && typeof el.y === 'number' && typeof el.x === 'number' && 
+    !isNaN(el.x) && !isNaN(el.y)
+  )
+  
+  // Check all pairs of elements (not just adjacent ones)
+  for (let i = 0; i < validElements.length; i++) {
+    for (let j = i + 1; j < validElements.length; j++) {
+      const el1 = validElements[i]
+      const el2 = validElements[j]
+      
+      const dim1 = estimateElementDimensions(el1)
+      const dim2 = estimateElementDimensions(el2)
+      
+      // Calculate bounding boxes
+      const box1 = {
+        left: el1.x,
+        top: el1.y,
+        right: el1.x + dim1.width,
+        bottom: el1.y + dim1.height
+      }
+      
+      const box2 = {
+        left: el2.x,
+        top: el2.y,
+        right: el2.x + dim2.width,
+        bottom: el2.y + dim2.height
+      }
+      
+      // Check for overlap (negative spacing) - improved calculation
+      const overlapLeft = Math.max(box1.left, box2.left)
+      const overlapRight = Math.min(box1.right, box2.right)
+      const overlapTop = Math.max(box1.top, box2.top)
+      const overlapBottom = Math.min(box1.bottom, box2.bottom)
+      
+      const overlapX = Math.max(0, overlapRight - overlapLeft)
+      const overlapY = Math.max(0, overlapBottom - overlapTop)
+      const isOverlapping = overlapX > 0 && overlapY > 0 // Any overlap counts
+      
+      // Calculate spacing in both directions
+      let spacingX = 0
+      let spacingY = 0
+      
+      if (isOverlapping) {
+        // Negative spacing means overlap
+        spacingX = -overlapX
+        spacingY = -overlapY
+      } else {
+        // Calculate distance between boxes
+        if (box1.right <= box2.left) {
+          spacingX = box2.left - box1.right
+        } else if (box2.right <= box1.left) {
+          spacingX = box1.left - box2.right
+        } else {
+          spacingX = 0 // Overlapping horizontally
+        }
+        
+        if (box1.bottom <= box2.top) {
+          spacingY = box2.top - box1.bottom
+        } else if (box2.bottom <= box1.top) {
+          spacingY = box1.top - box2.bottom
+        } else {
+          spacingY = 0 // Overlapping vertically
+        }
+      }
+      
+      // Check if elements are close enough to be considered for spacing issues
+      // We care about spacing if they're close vertically (within reasonable horizontal distance)
+      // or if they overlap
+      const horizontalDistance = Math.abs((box1.left + box1.right) / 2 - (box2.left + box2.right) / 2)
+      const verticalDistance = Math.abs((box1.top + box1.bottom) / 2 - (box2.top + box2.bottom) / 2)
+      
+      // Elements are "related" if they're close horizontally (within 2x the max width) or overlapping
+      const maxWidth = Math.max(dim1.width, dim2.width)
+      const areRelated = horizontalDistance < maxWidth * 2 || isOverlapping
+      
+      if (areRelated) {
+        // Skip spacing check ONLY if both elements are at their original template positions
+        // This allows templates to work without false positives, but still catches issues when elements are moved
+        const el1AtTemplate = isAtOriginalTemplatePosition(el1)
+        const el2AtTemplate = isAtOriginalTemplatePosition(el2)
+        
+        // Always check overlaps - they're always problems regardless of template
+        const shouldCheckSpacing = !(el1AtTemplate && el2AtTemplate) || isOverlapping
+        
+        if (!shouldCheckSpacing) {
+          continue // Skip this pair - both at original template positions and no overlap
+        }
+        
+        const minSpacing = getMinSpacing(el1, el2)
+        
+        // Always flag overlaps - they're always problems
+        if (isOverlapping) {
+          // Determine which element is above/below
+          const el1IsAbove = el1.y < el2.y
+          const topElement = el1IsAbove ? el1 : el2
+          const bottomElement = el1IsAbove ? el2 : el1
+          
+          spacingIssues.push({
+            elementId1: topElement.id,
+            elementId2: bottomElement.id,
+            spacing: Math.round(-overlapY), // Negative for overlap
+            minRequired: minSpacing,
+            isOverlapping: true,
+            direction: 'vertical'
+          })
+        } else {
+          // Check for tight spacing (not overlapping but too close)
+          // Only check if elements are not both at template positions
+          const spacingThreshold = minSpacing - 2 // Allow 2px tolerance
+          
+          if (spacingY >= 0 && spacingY < spacingThreshold) {
+            // Determine which element is above/below
+            const el1IsAbove = el1.y < el2.y
+            const topElement = el1IsAbove ? el1 : el2
+            const bottomElement = el1IsAbove ? el2 : el1
+            
+            spacingIssues.push({
+              elementId1: topElement.id,
+              elementId2: bottomElement.id,
+              spacing: Math.round(spacingY),
+              minRequired: minSpacing,
+              isOverlapping: false,
+              direction: 'vertical'
+            })
+          }
+        }
+      }
+    }
+  }
+  
+  // Remove duplicates (same pair might be detected multiple ways)
+  const uniqueIssues = []
+  const seenPairs = new Set()
+  spacingIssues.forEach(issue => {
+    const pairKey = `${Math.min(issue.elementId1, issue.elementId2)}-${Math.max(issue.elementId1, issue.elementId2)}`
+    if (!seenPairs.has(pairKey)) {
+      seenPairs.add(pairKey)
+      uniqueIssues.push(issue)
+    }
+  })
+  
+  const totalComparisons = validElements.length > 1 
+    ? (validElements.length * (validElements.length - 1)) / 2 
+    : 0
   const score = totalComparisons > 0
-    ? Math.round(((totalComparisons - spacingIssues.length) / totalComparisons) * 100)
+    ? Math.round(((totalComparisons - uniqueIssues.length) / totalComparisons) * 100)
     : 100
   
-  return { score, issues: spacingIssues, total: totalComparisons }
+  return { score, issues: uniqueIssues, total: totalComparisons }
 }
 
 // Check color matching with template and suggested colors
@@ -682,8 +957,8 @@ export const getSuggestions = (template, canvasElements = [], canvasBackground =
   // Check color contrast
   const contrastCheck = checkColorContrast(canvasElements, canvasBackground)
   
-  // Check spacing
-  const spacingCheck = checkSpacing(canvasElements)
+  // Check spacing (skip template elements - they're pre-designed)
+  const spacingCheck = checkSpacing(canvasElements, template)
   
   // Check color scheme match
   const colorSchemeMatch = checkColorSchemeMatch(canvasElements, selectedColors)
@@ -713,7 +988,8 @@ export const getSuggestions = (template, canvasElements = [], canvasBackground =
     canvasBackground,
     selectedColors,
     contrastCheck,
-    spacingCheck
+    spacingCheck,
+    completeness
   )
   
   return {
@@ -755,7 +1031,7 @@ const getUsedColors = (canvasElements) => {
 }
 
 // Generate element-specific suggestions (Grammarly-style)
-const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors, canvasBackground, selectedColors, contrastCheck, spacingCheck) => {
+const generateElementSuggestions = (template, canvasElements, suggestedFonts, suggestedColors, canvasBackground, selectedColors, contrastCheck, spacingCheck, completeness) => {
   const suggestions = []
   
   // Defensive checks for inputs
@@ -764,19 +1040,27 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
   const fonts = Array.isArray(suggestedFonts) ? suggestedFonts : []
   const colors = Array.isArray(suggestedColors) ? suggestedColors : []
   const schemeColors = Array.isArray(selectedColors) ? selectedColors : []
-  const bgColor = canvasBackground || '#ffffff'
+  // Normalize canvas background to ensure consistent format
+  const bgColor = canvasBackground 
+    ? (canvasBackground.startsWith('#') ? canvasBackground.toLowerCase() : '#' + canvasBackground.toLowerCase())
+    : '#ffffff'
   
-  // Check for missing elements
-  const templateElementIds = new Set(template.layout.elements.map(el => el?.id).filter(Boolean))
-  const canvasElementIds = new Set(elements.map(el => el?.id).filter(Boolean))
-  const missingElements = template.layout.elements.filter(el => el?.id && !canvasElementIds.has(el.id))
+  // Check for missing elements - use completeness check result which matches by style, not just ID
+  const missingElementIds = completeness?.missing || []
+  const missingElements = template.layout.elements.filter(el => el?.id && missingElementIds.includes(el.id))
   
   missingElements.forEach(element => {
+    // Get style name for better message
+    const styleName = element.type === 'text' 
+      ? (element.styleName || (typeof element.style === 'string' ? element.style : null) || element.id)
+      : element.id
+    
     suggestions.push({
       type: 'missing-element',
       elementId: element.id,
       elementType: element.type,
-      message: `Missing ${element.type === 'text' ? 'text element' : 'icon'}: ${element.id}`,
+      styleName: styleName,
+      message: `Missing ${element.type === 'text' ? 'text element' : 'icon'}: ${styleName}`,
       nextStep: `Add this element from the toolbar to complete the template structure`,
       designPrinciple: 'Completeness',
       action: 'add',
@@ -993,56 +1277,54 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
         contrastIsGood = schemeContrastRatio >= minRatio
       }
       
-      // Only show color scheme suggestion if contrast is good AND no contrast suggestion exists
-      if (element.color && !hasContrastSuggestion && contrastIsGood) {
-        const colorName = getColorNameFromHex(element.color)
-        if (colorName && colorName !== 'Black' && colorName !== 'White') {
-          const normalizedColorName = normalizeColorNameLocal(colorName)
-          if (!normalizedSchemeColors.has(normalizedColorName)) {
-            const matchingColors = schemeColors.map(color => ({
-              name: color,
-              hex: getColorHex(color) || '#000000'
-            }))
-            
-            suggestions.push({
-              type: 'color-scheme-group',
-              elementId: element.id,
-              currentValue: element.color || '#000000',
-              currentColorName: colorName,
-              options: matchingColors,
-              message: `Color doesn't match your selected color scheme`,
-              nextStep: `Pick a color from your selected scheme to maintain visual harmony`,
-              designPrinciple: 'Color Harmony',
-              action: 'update',
-              priority: 'medium'
-            })
-          }
-        }
-      }
+      // Don't show color scheme suggestions for text colors if contrast is good
+      // This allows users to deviate from template colors as long as they follow guidelines (contrast, etc.)
+      // If contrast is bad, contrast suggestions are shown separately (more important than color scheme matching)
+      // So we skip color scheme suggestions entirely to allow creative freedom when guidelines are met
       
-      // Check background color
+      // Check background color - only show if there are contrast issues
+      // Allow deviations from template if guidelines (contrast) are met
       if (element.backgroundColor && element.backgroundColor !== 'transparent') {
         const bgColorName = getColorNameFromHex(element.backgroundColor)
         if (bgColorName && bgColorName !== 'White') {
           const normalizedBgColorName = normalizeColorNameLocal(bgColorName)
           if (!normalizedSchemeColors.has(normalizedBgColorName)) {
-            const matchingColors = schemeColors.map(color => ({
-              name: color,
-              hex: getColorHex(color) || '#000000'
-            }))
+            // Check if this background has contrast issues with text on it
+            let hasContrastIssue = false
+            if (element.type === 'text' && element.color) {
+              const bgForContrast = element.backgroundColor
+              const contrastRatio = getContrastRatio(element.color, bgForContrast)
+              const fontSize = element.fontSize || 16
+              const fontWeight = element.fontWeight || 400
+              const isLargeText = fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700)
+              const minRatio = isLargeText ? 3 : 4.5
+              hasContrastIssue = contrastRatio < minRatio
+            } else {
+              // For non-text elements, check if any text elements use this background
+              // If we can't determine contrast easily, allow the deviation (don't show suggestion)
+              hasContrastIssue = false
+            }
             
-            suggestions.push({
-              type: 'color-scheme-bg-group',
-              elementId: element.id,
-              currentValue: element.backgroundColor || '#ffffff',
-              currentColorName: bgColorName,
-              options: matchingColors,
-              message: `Background color doesn't match your selected color scheme`,
-              nextStep: `Select a background color from your chosen scheme for better cohesion`,
-              designPrinciple: 'Color Harmony',
-              action: 'update',
-              priority: 'medium'
-            })
+            // Only show suggestion if there are contrast issues (allow valid deviations)
+            if (hasContrastIssue) {
+              const matchingColors = schemeColors.map(color => ({
+                name: color,
+                hex: getColorHex(color) || '#000000'
+              }))
+              
+              suggestions.push({
+                type: 'color-scheme-bg-group',
+                elementId: element.id,
+                currentValue: element.backgroundColor || '#ffffff',
+                currentColorName: bgColorName,
+                options: matchingColors,
+                message: `Background color doesn't match your selected color scheme`,
+                nextStep: `Select a background color from your chosen scheme for better cohesion`,
+                designPrinciple: 'Color Harmony',
+                action: 'update',
+                priority: 'medium'
+              })
+            }
           }
         }
       }
@@ -1064,18 +1346,27 @@ const generateElementSuggestions = (template, canvasElements, suggestedFonts, su
                 : (otherElement.elementType || 'element'))
             : 'adjacent element'
           
+          const isOverlapping = elementSpacingIssue.isOverlapping
+          const spacing = elementSpacingIssue.spacing
+          const minRequired = elementSpacingIssue.minRequired
+          
           suggestions.push({
             type: 'spacing-group',
             elementId: element.id,
-            spacing: elementSpacingIssue.spacing,
-            minRequired: elementSpacingIssue.minRequired,
+            spacing: spacing,
+            minRequired: minRequired,
             otherElementId: elementSpacingIssue.elementId2,
             otherElementLabel: otherElementLabel,
-            message: `Increase spacing (currently ${elementSpacingIssue.spacing}px, need ${elementSpacingIssue.minRequired}px)`,
-            nextStep: `Drag this element further from "${otherElementLabel}" to improve readability and visual breathing room`,
+            isOverlapping: isOverlapping,
+            message: isOverlapping
+              ? `Elements are overlapping (${Math.abs(spacing)}px overlap)`
+              : `Increase spacing (currently ${spacing}px, need ${minRequired}px minimum)`,
+            nextStep: isOverlapping
+              ? `Drag this element away from "${otherElementLabel}" to prevent overlap and improve readability`
+              : `Drag this element further from "${otherElementLabel}" to improve readability and visual breathing room`,
             designPrinciple: 'Spacing',
             action: 'update',
-            priority: 'low'
+            priority: isOverlapping ? 'high' : 'medium' // Overlaps are higher priority
           })
         }
       }

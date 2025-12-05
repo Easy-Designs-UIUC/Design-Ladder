@@ -9,25 +9,46 @@ const __dirname = dirname(__filename)
 // Load templates by mocking image imports and dynamically importing the module
 async function loadTemplates() {
   const templatesPath = join(__dirname, '../src/data/templates.js')
+  const templateUtilsPath = join(__dirname, '../src/data/templateUtils.js')
   const content = readFileSync(templatesPath, 'utf-8')
+  const templateUtilsContent = readFileSync(templateUtilsPath, 'utf-8')
   
   // Mock image imports with placeholder data URI
   const mockThumbnail = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-  const modifiedContent = content
+  let modifiedContent = content
     .replace(/import (\w+) from ['"][^'"]+\.png['"]/g, `const $1 = '${mockThumbnail}'`)
   
-  // Create temporary file with mocked imports and import it
-  const tempFile = join(__dirname, 'temp-templates.mjs')
+  // Create temporary templateUtils file first
+  const tempUtilsFile = join(__dirname, 'temp-templateUtils.mjs')
+  const tempTemplatesFile = join(__dirname, 'temp-templates.mjs')
   const fs = await import('fs')
+  
+  // Write templateUtils file - use the actual content
+  fs.writeFileSync(tempUtilsFile, templateUtilsContent)
+  
+  // Update import path to point to temp file (before processing)
+  modifiedContent = modifiedContent.replace(
+    /import \{ ([^}]+) \} from ['"]\.\/templateUtils['"]/g,
+    `import { $1 } from './temp-templateUtils.mjs'`
+  )
+  
   const contentWithoutExport = modifiedContent.replace(/export const templates =/, 'const templates =')
-  fs.writeFileSync(tempFile, contentWithoutExport + '\nexport { templates }')
+  
+  // Final content doesn't need additional replacement since we already fixed the import
+  const finalContent = contentWithoutExport
+  
+  fs.writeFileSync(tempTemplatesFile, finalContent + '\nexport { templates }')
   
   try {
-    const { templates } = await import(`file://${tempFile}`)
-    fs.unlinkSync(tempFile)
+    const { templates } = await import(`file://${tempTemplatesFile}`)
+    // Clean up temp files
+    if (fs.existsSync(tempTemplatesFile)) fs.unlinkSync(tempTemplatesFile)
+    if (fs.existsSync(tempUtilsFile)) fs.unlinkSync(tempUtilsFile)
     return templates
   } catch (error) {
-    if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile)
+    // Clean up temp files on error
+    if (fs.existsSync(tempTemplatesFile)) fs.unlinkSync(tempTemplatesFile)
+    if (fs.existsSync(tempUtilsFile)) fs.unlinkSync(tempUtilsFile)
     throw error
   }
 }
